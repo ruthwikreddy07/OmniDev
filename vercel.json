@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "outputDirectory": "static",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
@@ -13,14 +14,15 @@
     }
   ],
   "rewrites": [
-    { "source": "/console", "destination": "/static/console.html" },
-    { "source": "/workspace", "destination": "/static/workspace.html" },
-    { "source": "/analytics", "destination": "/static/analytics.html" },
-    { "source": "/integrations", "destination": "/static/integrations.html" },
-    { "source": "/rules", "destination": "/static/rules.html" },
-    { "source": "/docs", "destination": "/static/docs.html" },
-    { "source": "/settings", "destination": "/static/settings.html" },
-    { "source": "/auth", "destination": "/static/auth.html" },
-    { "source": "/", "destination": "/static/index.html" }
+    { "source": "/static/:path*", "destination": "/:path*" },
+    { "source": "/console", "destination": "/console.html" },
+    { "source": "/workspace", "destination": "/workspace.html" },
+    { "source": "/analytics", "destination": "/analytics.html" },
+    { "source": "/integrations", "destination": "/integrations.html" },
+    { "source": "/rules", "destination": "/rules.html" },
+    { "source": "/docs", "destination": "/docs.html" },
+    { "source": "/settings", "destination": "/settings.html" },
+    { "source": "/auth", "destination": "/auth.html" },
+    { "source": "/", "destination": "/index.html" }
   ]
 }
