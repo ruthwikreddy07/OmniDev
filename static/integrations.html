@@ -242,9 +242,9 @@ async function loadInfo() {
   try {
     const res = await fetch('/api/system/info');
     const data = await res.json();
-    if (data.localtunnel_url) {
-      document.getElementById('url-github-webhook').value = data.localtunnel_url + '/api/webhook/github';
-    }
+    const apiBase = window.getApiBase ? window.getApiBase() : '';
+    const webhookBase = apiBase || location.origin;
+    document.getElementById('url-github-webhook').value = webhookBase + '/api/webhook/github';
     if (data.n8n_webhook_url) {
       document.getElementById('url-n8n-webhook').value = data.n8n_webhook_url;
     }

@@ -556,12 +556,16 @@ async function saveAllSettings() {
   }
 }
 
-if (window.location.hash) {
-  const tab = window.location.hash.substring(1);
-  if (['profile', 'credentials', 'ingress', 'agent', 'danger'].includes(tab)) {
-    switchTab(tab);
+function _applyHashTab() {
+  if (window.location.hash) {
+    const tab = window.location.hash.substring(1);
+    if (['profile', 'credentials', 'ingress', 'agent', 'danger'].includes(tab)) {
+      switchTab(tab);
+    }
   }
 }
+window.addEventListener('hashchange', _applyHashTab);
+_applyHashTab();
 
 loadSettings();
 </script>

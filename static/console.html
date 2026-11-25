@@ -511,7 +511,7 @@ async function createJob(btnEl) {
 
 async function approveJob(btnEl) {
   if (!currentJobId) return;
-  const btn = btnEl || document.querySelector('#approval-dock .btn-primary');
+  const btn = btnEl || document.querySelector('#approval-dock .btn-approve');
   if (btn) { btn.textContent = 'Pushing Branch & Opening PR...'; btn.disabled = true; }
   try {
     const res = await fetch('/api/jobs/' + currentJobId + '/approve', { method: 'POST' });
