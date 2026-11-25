@@ -321,10 +321,16 @@ async function loadJobs() {
     document.getElementById('job-count').textContent = jobs.length + ' incident' + (jobs.length !== 1 ? 's' : '');
     if (jobs.length === 0) {
       empty.style.display = 'flex';
-      empty.innerHTML = `
+      const hasRepo = window.getOmniDevRepo && window.getOmniDevRepo();
+      empty.innerHTML = hasRepo ? `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <div class="empty-title">No jobs recorded yet</div>
+        <div class="empty-title">No incidents for ${escHtml(hasRepo)}</div>
         <div class="empty-desc">Click "Dispatch Agent" above to launch a self-healing task</div>
+      ` : `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <div class="empty-title">Connect a Repository to Begin</div>
+        <div class="empty-desc">Select your GitHub repository to isolate and track autonomous fixes</div>
+        <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openRepoModal()">+ Connect Repository</button>
       `;
       return;
     }
@@ -465,20 +471,31 @@ function connectWS(jobId) {
   };
 }
 
-async function createJob() {
+async function createJob(btnEl) {
+  const repo = window.getOmniDevRepo ? window.getOmniDevRepo() : '';
+  if (!repo) {
+    alert('Please connect a target GitHub repository first.');
+    if (window.openRepoModal) window.openRepoModal();
+    return;
+  }
   const task = document.getElementById('job-task').value;
   const dir = document.getElementById('job-dir').value || '.';
-  if (!task.trim()) return;
-  const btn = event.target;
-  btn.textContent = 'Spawning Agent...';
-  btn.disabled = true;
+  if (!task.trim()) {
+    alert('Please enter a bug or task description.');
+    return;
+  }
+  const btn = btnEl || document.querySelector('#create-form .btn-primary');
+  if (btn) { btn.textContent = 'Spawning Agent...'; btn.disabled = true; }
   try {
     const res = await fetch('/api/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task, project_dir: dir })
+      body: JSON.stringify({ task: task.trim(), project_dir: dir })
     });
     const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'Failed to create job');
+    }
     document.getElementById('job-task').value = '';
     document.getElementById('create-form').style.display = 'none';
     await loadJobs();
@@ -486,28 +503,28 @@ async function createJob() {
       selectJob(data.job_id);
     }
   } catch(e) {
-    alert('Failed to launch job: ' + e);
+    alert('Failed to launch job: ' + e.message);
   } finally {
-    btn.textContent = 'Launch ReAct Loop';
-    btn.disabled = false;
+    if (btn) { btn.textContent = 'Launch ReAct Loop'; btn.disabled = false; }
   }
 }
 
-async function approveJob() {
+async function approveJob(btnEl) {
   if (!currentJobId) return;
-  const btn = event.target;
-  btn.textContent = 'Pushing Branch & Opening PR...';
-  btn.disabled = true;
+  const btn = btnEl || document.querySelector('#approval-dock .btn-primary');
+  if (btn) { btn.textContent = 'Pushing Branch & Opening PR...'; btn.disabled = true; }
   try {
     const res = await fetch('/api/jobs/' + currentJobId + '/approve', { method: 'POST' });
     const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'Approval failed');
+    }
     await selectJob(currentJobId);
     loadJobs();
   } catch(e) {
-    alert('Approval error: ' + e);
+    alert('Approval error: ' + e.message);
   } finally {
-    btn.textContent = '✓ Approve & Open GitHub PR';
-    btn.disabled = false;
+    if (btn) { btn.textContent = '✓ Approve & Open GitHub PR'; btn.disabled = false; }
   }
 }
 
@@ -515,13 +532,19 @@ async function rejectJob() {
   if (!currentJobId) return;
   const reason = prompt('Reason for rejection:', 'Does not meet patch guidelines');
   if (reason === null) return;
-  await fetch('/api/jobs/' + currentJobId + '/reject', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reason })
-  });
-  selectJob(currentJobId);
-  loadJobs();
+  try {
+    const res = await fetch('/api/jobs/' + currentJobId + '/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Rejection failed');
+    selectJob(currentJobId);
+    loadJobs();
+  } catch(e) {
+    alert('Rejection error: ' + e.message);
+  }
 }
 
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
@@ -533,6 +556,13 @@ function formatTime(iso) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   } catch(e) { return iso; }
 }
+
+window.addEventListener('omnidev:repo-changed', () => {
+  currentJobId = null;
+  document.getElementById('detail-panel').style.display = 'none';
+  loadSystemInfo();
+  loadJobs();
+});
 
 loadSystemInfo();
 loadJobs();

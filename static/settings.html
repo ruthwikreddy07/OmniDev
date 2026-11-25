@@ -507,6 +507,9 @@ async function saveAllSettings() {
 
   if (window.setOmniDevProfile) window.setOmniDevProfile(profileObj);
 
+  const backendInput = document.getElementById('cfg-backend-url');
+  if (backendInput && window.setApiBase) window.setApiBase(backendInput.value);
+
   const repoVal = document.getElementById('cfg-github-repo').value.trim();
   const tokenVal = document.getElementById('cfg-gh-token').value.trim();
   const groqVal = document.getElementById('cfg-groq-key').value.trim();

@@ -1,4 +1,5 @@
 import os
+import re
 import httpx
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from pydantic import BaseModel
@@ -34,12 +35,27 @@ DEFAULT_USER_PROFILE = {
 USER_PROFILE = dict(DEFAULT_USER_PROFILE)
 
 
+_REPO_SLUG_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+
+
 def resolve_target_repo(explicit: Optional[str] = None, header_repo: Optional[str] = None) -> Optional[str]:
+    raw = None
     if explicit and explicit.strip() and explicit.strip() != "null":
-        return explicit.strip()
-    if header_repo and header_repo.strip() and header_repo.strip() != "null":
-        return header_repo.strip()
-    return None
+        raw = explicit.strip()
+    elif header_repo and header_repo.strip() and header_repo.strip() != "null":
+        raw = header_repo.strip()
+    if not raw:
+        return None
+    if raw.startswith("https://github.com/"):
+        raw = raw[len("https://github.com/"):]
+    elif raw.startswith("http://github.com/"):
+        raw = raw[len("http://github.com/"):]
+    if raw.endswith(".git"):
+        raw = raw[:-4]
+    raw = raw.strip("/")
+    if not _REPO_SLUG_RE.match(raw):
+        raise HTTPException(status_code=400, detail="Invalid repository format. Expected 'owner/repo'.")
+    return raw
 
 
 class CreateJobRequest(BaseModel):
@@ -80,12 +96,14 @@ async def head_root():
 
 @router.post("/api/jobs")
 async def create_job(req: CreateJobRequest, request: Request):
+    if not req.task or not req.task.strip():
+        raise HTTPException(status_code=400, detail="Task description cannot be empty")
     target_repo = resolve_target_repo(req.github_repo, request.headers.get("X-Target-Repo")) or ""
     target_token = req.github_token or request.headers.get("X-GitHub-Token") or ""
     target_groq_key = req.api_key or request.headers.get("X-Groq-Api-Key") or ""
     job_id = job_manager.create_job(
-        task=req.task,
-        project_dir=req.project_dir,
+        task=req.task.strip(),
+        project_dir=".",
         api_key=target_groq_key,
         github_repo=target_repo,
         github_token=target_token
@@ -101,21 +119,37 @@ async def list_jobs(request: Request):
     return {"jobs": job_manager.list_jobs(github_repo=repo)}
 
 
+def _assert_job_repo_access(job: dict, request: Request):
+    job_repo = (job.get("github_repo") or "").strip()
+    if not job_repo:
+        return
+    req_repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo"))
+    if req_repo and req_repo != job_repo:
+        raise HTTPException(status_code=403, detail="Access denied: job belongs to a different repository")
+
+
 @router.get("/api/jobs/{job_id}")
-async def get_job(job_id: str):
+async def get_job(job_id: str, request: Request):
     job = job_manager.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    _assert_job_repo_access(job, request)
     return job
 
 
 @router.post("/api/jobs/{job_id}/approve")
 async def approve_job(job_id: str, request: Request):
     try:
+        job = job_manager.get_job(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        _assert_job_repo_access(job, request)
         token = request.headers.get("X-GitHub-Token", "")
         repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo")) or ""
         result = await job_manager.approve_job(job_id, github_token=token, github_repo=repo)
         return result
+    except HTTPException:
+        raise
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
@@ -123,10 +157,16 @@ async def approve_job(job_id: str, request: Request):
 
 
 @router.post("/api/jobs/{job_id}/reject")
-async def reject_job(job_id: str, req: RejectJobRequest):
+async def reject_job(job_id: str, req: RejectJobRequest, request: Request):
     try:
+        job = job_manager.get_job(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        _assert_job_repo_access(job, request)
         result = await job_manager.reject_job(job_id, req.reason or "")
         return result
+    except HTTPException:
+        raise
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:

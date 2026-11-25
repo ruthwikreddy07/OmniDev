@@ -173,9 +173,9 @@
         </div>
         <div class="int-desc">Subscribes browser clients to live agent step traces, test assertions, diff reviews, and interactive human-in-the-loop approval triggers.</div>
         <div class="int-status-row">
-          <span class="badge badge-success"><span class="badge-dot"></span>Live on Port 4000</span>
+          <span class="badge badge-success"><span class="badge-dot"></span><span id="ws-status-badge">Live Gateway</span></span>
         </div>
-        <div class="int-endpoint">ws://localhost:4000/ws/{job_id}</div>
+        <div class="int-endpoint" id="ws-endpoint-txt">wss://.../ws/{job_id}</div>
       </div>
 
       <div class="int-card animate-in animate-in-5">
@@ -251,6 +251,10 @@ async function loadInfo() {
     if (data.db_engine) {
       document.getElementById('db-engine-name').textContent = data.db_engine + ' Database';
       document.getElementById('db-engine-badge').textContent = 'Active (' + data.db_engine + ')';
+    }
+    if (window.getOmniDevWsUrl) {
+      const wsEl = document.getElementById('ws-endpoint-txt');
+      if (wsEl) wsEl.textContent = window.getOmniDevWsUrl('/ws/{job_id}');
     }
   } catch(e) {}
 }
