@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="omni-grad" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#00d4aa"/>
+    </linearGradient>
+    <linearGradient id="omni-bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#131126"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+    <filter id="omni-glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <!-- Obsidian Squircle Base -->
+  <rect x="3" y="3" width="58" height="58" rx="16" fill="url(#omni-bg)" stroke="url(#omni-grad)" stroke-width="2.5"/>
+  <!-- Outer Cyber Hexagon / Orbital Ring -->
+  <path d="M32 13L48.5 22.5V41.5L32 51L15.5 41.5V22.5L32 13Z" stroke="url(#omni-grad)" stroke-width="3" stroke-linejoin="round" filter="url(#omni-glow)"/>
+  <!-- Inner Autonomous Spark / Lightning Bolt -->
+  <path d="M34.5 20L24.5 33.5H31.5L29.5 44L39.5 30.5H32.5L34.5 20Z" fill="url(#omni-grad)" filter="url(#omni-glow)"/>
+  <!-- Orbital Accent Nodes -->
+  <circle cx="32" cy="13" r="2.2" fill="#fff"/>
+  <circle cx="48.5" cy="41.5" r="2.2" fill="#00d4aa"/>
+  <circle cx="15.5" cy="41.5" r="2.2" fill="#8b5cf6"/>
+</svg>

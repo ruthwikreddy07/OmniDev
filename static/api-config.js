@@ -130,6 +130,21 @@
     const repo = window.getOmniDevRepo();
     const profile = window.getOmniDevProfile();
 
+    // Inject Brand SVG Logo & Favicon
+    if (!document.querySelector('link[rel="icon"]')) {
+      const fav = document.createElement('link');
+      fav.rel = 'icon';
+      fav.type = 'image/svg+xml';
+      fav.href = '/static/logo.svg';
+      document.head.appendChild(fav);
+    }
+    document.querySelectorAll('.brand-icon').forEach(el => {
+      if (!el.dataset.logoApplied) {
+        el.innerHTML = '<img src="/static/logo.svg" alt="OmniDev Logo" style="width:100%;height:100%;display:block;border-radius:10px;">';
+        el.dataset.logoApplied = 'true';
+      }
+    });
+
     // Synchronize Topbar Repo Pills
     const repoPillEls = document.querySelectorAll('#global-repo-pill, #nav-repo-link, #landing-repo-pill, .repo-pill');
     repoPillEls.forEach(el => {

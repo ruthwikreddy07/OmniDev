@@ -140,11 +140,15 @@ canvas#aurora-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
   text-decoration: none; color: var(--text-primary);
 }
 .topbar-brand .brand-icon {
-  width: 32px; height: 32px; border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--accent), #00d4aa);
+  width: 34px; height: 34px; border-radius: 10px;
+  background: transparent;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 14px; color: #fff;
-  box-shadow: 0 0 20px rgba(124,92,252,0.3);
+  box-shadow: 0 0 22px rgba(124,92,252,0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.topbar-brand:hover .brand-icon {
+  transform: scale(1.06);
+  box-shadow: 0 0 28px rgba(0,212,170,0.45);
 }
 .topbar-brand .brand-name {
   font-size: 17px; font-weight: 700; letter-spacing: -0.03em;
