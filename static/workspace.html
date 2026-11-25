@@ -8,110 +8,126 @@
 <style>
 .repo-toolbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 24px; background: rgba(13, 17, 26, 0.85);
-  border-bottom: 1px solid var(--border-subtle); backdrop-filter: blur(12px);
-  position: sticky; top: 64px; z-index: 50; flex-wrap: wrap; gap: 12px;
+  background: var(--surface-1); border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px; gap: 16px; flex-wrap: wrap;
 }
-.repo-toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.repo-title-link {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 14px; font-weight: 700; color: #fff;
-  text-decoration: none; padding: 4px 8px; border-radius: 6px;
-  background: var(--surface-2); border: 1px solid var(--border-subtle);
-  transition: all var(--transition-fast);
-}
-.repo-title-link:hover { border-color: var(--accent); background: var(--surface-3); }
-.branch-picker {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 10px; background: var(--surface-1);
-  border: 1px solid var(--border-subtle); border-radius: 6px;
-  font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);
-}
-.branch-picker select {
-  background: transparent; border: none; color: var(--text-primary);
-  font-family: var(--font-mono); font-size: 12px; outline: none; cursor: pointer;
-}
+.repo-toolbar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .repo-toolbar-right { display: flex; align-items: center; gap: 10px; }
 
-.explorer-layout {
-  display: grid; grid-template-columns: 300px 1fr;
-  min-height: calc(100vh - 120px);
+.repo-title-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; color: #fff;
+  text-decoration: none; padding: 4px 8px; border-radius: 6px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle);
+  transition: all 0.15s ease;
 }
+.repo-title-link:hover {
+  background: rgba(255,255,255,0.08); border-color: var(--accent); color: var(--accent);
+}
+
+.branch-picker {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); padding: 5px 10px;
+  font-size: 12.5px; color: var(--text-secondary);
+}
+.branch-picker select {
+  background: transparent; border: none; color: #fff;
+  font-family: var(--font-mono); font-size: 12px; outline: none; cursor: pointer;
+}
+.branch-picker select option { background: var(--surface-2); color: #fff; }
+
+.explorer-layout {
+  display: grid; grid-template-columns: 320px 1fr;
+  min-height: calc(100vh - 120px); border-bottom: 1px solid var(--border-subtle);
+}
+
 .file-tree-panel {
-  border-right: 1px solid var(--border-subtle); padding: 16px;
-  background: rgba(10,13,20,0.65); backdrop-filter: blur(10px);
-  overflow-y: auto; height: calc(100vh - 120px); position: sticky; top: 120px;
+  background: var(--surface-1); border-right: 1px solid var(--border-subtle);
+  padding: 16px 12px; overflow-y: auto; height: calc(100vh - 120px);
+  position: sticky; top: 120px;
 }
 .tree-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 12px; padding: 0 4px;
 }
 .tree-header h3 {
-  font-size: 11.5px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--text-tertiary); margin: 0;
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-tertiary);
 }
 .tree-search {
-  width: 100%; padding: 8px 12px 8px 32px;
-  background: var(--surface-0); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm); color: var(--text-primary);
-  font-family: var(--font-sans); font-size: 13px; outline: none;
-  margin-bottom: 12px; transition: border var(--transition-fast);
-  background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235a6175' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: 10px center;
+  width: 100%; box-sizing: border-box; background: var(--surface-2);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  color: #fff; padding: 7px 10px; font-size: 12.5px; margin-bottom: 12px;
+  outline: none;
 }
 .tree-search:focus { border-color: var(--accent); }
+
+.tree-folder { margin-bottom: 2px; }
 .tree-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 10px; border-radius: 6px;
-  font-size: 13px; color: var(--text-secondary);
-  cursor: pointer; transition: all var(--transition-fast);
-  text-decoration: none; user-select: none;
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 8px; border-radius: 4px; cursor: pointer;
+  font-size: 12.5px; color: var(--text-secondary);
+  user-select: none; transition: all 0.15s ease;
+  font-family: var(--font-mono);
 }
-.tree-item:hover { background: var(--surface-2); color: var(--text-primary); }
+.tree-item:hover { background: var(--surface-2); color: #fff; }
 .tree-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .tree-item svg { width: 14px; height: 14px; flex-shrink: 0; }
-.tree-folder > .tree-children { padding-left: 14px; }
 .tree-toggle {
-  width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
-  color: var(--text-tertiary); transition: transform var(--transition-fast); flex-shrink: 0;
+  font-size: 10px; width: 12px; text-align: center; color: var(--text-tertiary);
+  transition: transform 0.15s ease; display: inline-block;
 }
 .tree-toggle.open { transform: rotate(90deg); }
+.tree-children { padding-left: 14px; }
 
-.code-viewer-panel { padding: 24px 32px; overflow-x: hidden; }
+.code-viewer-panel {
+  background: var(--bg-base); display: flex; flex-direction: column;
+  overflow: hidden;
+}
 .file-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px; background: var(--surface-1);
-  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  margin-bottom: 0; flex-wrap: wrap; gap: 10px;
+  background: var(--surface-1); border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 20px; flex-wrap: wrap; gap: 10px;
 }
-.file-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; font-family: var(--font-mono); }
-.file-breadcrumb span { color: var(--text-tertiary); }
-.file-breadcrumb .current { color: #fff; font-weight: 600; }
-.file-meta-badges { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.file-breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-family: var(--font-mono); color: var(--text-tertiary);
+}
+.file-breadcrumb span.current { color: #fff; font-weight: 600; }
+.file-meta-badges { display: flex; align-items: center; gap: 8px; }
+
 .code-content {
-  background: var(--surface-0); border: 1px solid var(--border-subtle);
-  border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  padding: 16px 0; font-family: var(--font-mono); font-size: 13px;
-  line-height: 1.8; overflow-x: auto; min-height: 480px;
+  flex: 1; padding: 20px; overflow: auto;
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6;
+  background: #060913; color: #e2e8f0;
 }
-.code-line { display: flex; padding: 0 20px; transition: background var(--transition-fast); }
-.code-line:hover { background: rgba(124,92,252,0.06); }
+.code-line { display: flex; }
+.code-line:hover { background: rgba(255,255,255,0.03); }
 .code-line .ln {
-  min-width: 48px; text-align: right; padding-right: 18px;
-  color: var(--text-tertiary); user-select: none; opacity: 0.5;
-  border-right: 1px solid var(--border-subtle); margin-right: 18px;
+  width: 45px; text-align: right; padding-right: 18px;
+  color: var(--text-tertiary); user-select: none; flex-shrink: 0;
 }
-.code-line .code { color: var(--text-primary); white-space: pre; font-size: 12.5px; }
+.code-line .code { flex: 1; white-space: pre-wrap; word-break: break-all; }
 
 .repo-card {
-  background: var(--surface-1); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md); padding: 32px; max-width: 860px; margin: 20px auto;
+  margin: 32px auto; max-width: 720px; background: var(--surface-1);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+  padding: 32px; box-shadow: var(--shadow-card);
 }
-.repo-hero-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
-.repo-hero-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
-.repo-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.repo-hero-title {
+  font-size: 22px; font-weight: 800; color: #fff; display: flex;
+  align-items: center; gap: 12px; margin-bottom: 8px;
+}
+.repo-hero-desc {
+  font-size: 14px; color: var(--text-secondary); line-height: 1.6;
+  margin-bottom: 24px;
+}
+.repo-stats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px;
+}
 .stat-box {
-  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  background: var(--surface-2); border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm); padding: 14px;
 }
 .stat-box .stat-label { font-size: 11.5px; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 4px; }
@@ -150,57 +166,41 @@
       <a href="/docs">Architecture</a>
     </div>
     <div class="topbar-actions">
-      <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="repo-pill" id="global-repo-pill" title="Connected GitHub Target">
+      <a href="javascript:void(0)" class="repo-pill" id="global-repo-pill" title="Target Repository">
         <span class="badge-dot"></span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-        <span id="top-repo-text">ruthwikreddy07/wpmmain</span>
+        <span id="top-repo-text">+ Connect Repo</span>
       </a>
       <a href="/settings" class="btn-icon" title="Platform Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
       <div class="user-profile-menu">
         <button class="user-avatar-btn" onclick="toggleUserDropdown(event)">
-          <div class="user-avatar-circle">RR</div>
-          <span style="font-size:12.5px;font-weight:600;">Ruthwik</span>
+          <div class="user-avatar-circle">OP</div>
+          <span style="font-size:12.5px;font-weight:600;">Operator</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <div id="user-dropdown-panel" class="dropdown-panel" style="display:none;">
-          <div style="padding:6px 8px 10px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px;">
-            <div style="font-size:13.5px;font-weight:700;">D. Ruthwik Reddy</div>
-            <div style="font-size:11.5px;color:var(--text-tertiary);">ruthwikreddy07 • Admin</div>
-            <div style="margin-top:6px;"><span class="badge badge-success"><span class="badge-dot"></span>Connected to wpmmain</span></div>
-          </div>
-          <a href="/settings#profile" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Account Profile</a>
-          <a href="/settings#credentials" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Repository &amp; Keys</a>
-          <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg> Open GitHub Repo ↗</a>
-          <div style="border-top:1px solid var(--border-subtle);margin-top:8px;padding-top:8px;">
-            <a href="/auth" class="dropdown-item danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign Out</a>
-          </div>
-        </div>
+        <div id="user-dropdown-panel" class="dropdown-panel" style="display:none;"></div>
       </div>
     </div>
   </nav>
 
-  <!-- GitHub Repository Secondary Toolbar -->
+  <!-- Repository Secondary Toolbar -->
   <div class="repo-toolbar">
     <div class="repo-toolbar-left">
-      <a id="repo-title-btn" href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="repo-title-link">
+      <a id="repo-title-btn" href="javascript:void(0)" onclick="openRepoModal()" class="repo-title-link">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-        <span id="repo-name-text">ruthwikreddy07/wpmmain</span>
-        <span style="font-size:11px;color:var(--text-tertiary);">↗</span>
+        <span id="repo-name-text">Select / Connect Target Repository</span>
+        <span style="font-size:11px;color:var(--text-tertiary);">⚙</span>
       </a>
 
       <div class="branch-picker">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
         <select id="branch-select" onchange="switchBranch(this.value)">
           <option value="main" selected>main (default)</option>
-          <option value="omnidev/fix-zero-div">omnidev/fix-zero-div</option>
-          <option value="omnidev/fix-webhook-4">omnidev/fix-webhook-4</option>
+          <option value="staging">staging</option>
+          <option value="dev">dev</option>
         </select>
       </div>
 
-      <span class="badge badge-success"><span class="badge-dot"></span>Synced · commit #a8f3b21</span>
-      <a href="https://github.com/ruthwikreddy07/wpmmain/pull/3" target="_blank" class="badge badge-info" style="text-decoration:none;cursor:pointer;">
-        Active PR #3 Open ↗
-      </a>
+      <span id="sync-status-badge" class="badge badge-success"><span class="badge-dot"></span>Ready</span>
     </div>
 
     <div class="repo-toolbar-right">
@@ -208,10 +208,10 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         Clone HTTPS
       </button>
-      <a href="/settings#credentials" class="btn btn-ghost btn-sm" title="Edit Repository or PAT Token">
+      <button class="btn btn-ghost btn-sm" onclick="openRepoModal()" title="Switch or Connect Repository">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Switch Repo / Keys
-      </a>
+        Switch Repo
+      </button>
       <a href="/console" class="btn btn-primary btn-sm">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Dispatch Incident Fix
@@ -224,7 +224,7 @@
       <!-- File Explorer Tree Panel -->
       <div class="file-tree-panel">
         <div class="tree-header">
-          <h3>Tracked Files (<span id="file-count">...</span>)</h3>
+          <h3>Tracked Files (<span id="file-count">0</span>)</h3>
           <button class="btn-icon" style="width:28px;height:28px;" onclick="loadTree()" title="Refresh File Tree">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           </button>
@@ -239,36 +239,35 @@
           <div class="repo-card animate-in">
             <div class="repo-hero-title">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-              ruthwikreddy07/wpmmain
+              <span id="hero-repo-name">Autonomous Workspace</span>
             </div>
-            <div class="repo-hero-desc">
-              Connected GitHub repository tracked by OmniDev autonomous self-healing SRE engine.
-              All pull requests, branches, and surgical fixes originate from this workspace.
+            <div class="repo-hero-desc" id="hero-repo-desc">
+              Connect your target repository to enable real-time codebase navigation, file inspection, and surgical automated diffs.
             </div>
 
             <div class="repo-stats-grid">
               <div class="stat-box">
                 <div class="stat-label">Active Branch</div>
-                <div class="stat-val" style="color:var(--accent);">main</div>
+                <div class="stat-val" style="color:var(--accent);" id="stat-branch">main</div>
               </div>
               <div class="stat-box">
-                <div class="stat-label">Test Suite Health</div>
+                <div class="stat-label">Engine Health</div>
                 <div class="stat-val" style="color:var(--success);">17 / 17 OK</div>
               </div>
               <div class="stat-box">
-                <div class="stat-label">Pull Requests</div>
-                <div class="stat-val" style="color:var(--accent-2);">PR #3 Live</div>
+                <div class="stat-label">Architecture</div>
+                <div class="stat-val" style="color:var(--accent-2);">Multi-Tenant</div>
               </div>
               <div class="stat-box">
-                <div class="stat-label">Target Language</div>
-                <div class="stat-val">Python 100%</div>
+                <div class="stat-label">Privacy Shield</div>
+                <div class="stat-val" style="color:var(--success);">100% Zero Leak</div>
               </div>
             </div>
 
             <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">
               Quick File Shortcuts
             </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;" id="quick-file-shortcuts">
               <button class="btn btn-ghost btn-sm" onclick="loadFile('src/sample_app/calculator.py')">📄 src/sample_app/calculator.py</button>
               <button class="btn btn-ghost btn-sm" onclick="loadFile('src/sample_app/test_calculator.py')">🧪 test_calculator.py</button>
               <button class="btn btn-ghost btn-sm" onclick="loadFile('src/server/routes.py')">⚡ src/server/routes.py</button>
@@ -280,7 +279,7 @@
         <div id="viewer-content" style="display:none;" class="animate-in">
           <div class="file-header">
             <div class="file-breadcrumb">
-              <span id="breadcrumb-root">ruthwikreddy07/wpmmain</span>
+              <span id="breadcrumb-root">workspace</span>
               <span>/</span>
               <span class="current" id="file-title">filename</span>
             </div>
@@ -288,7 +287,7 @@
               <span class="tag" id="file-lang">PYTHON</span>
               <span class="tag" id="file-lines">0 lines</span>
               <span class="tag" id="file-size">0 KB</span>
-              <span class="tag" style="background:var(--accent-soft);color:var(--accent);">Author: ruthwikreddy07</span>
+              <span class="tag" style="background:var(--accent-soft);color:var(--accent);">Tracked in Workspace</span>
               <button class="btn btn-ghost btn-sm" onclick="copyFileText()" style="padding:4px 8px;font-size:11px;">Copy Code</button>
             </div>
           </div>
@@ -316,8 +315,14 @@ function showToast(text) {
 }
 
 function copyCloneUrl() {
-  navigator.clipboard.writeText('https://github.com/ruthwikreddy07/wpmmain.git');
-  showToast('✓ Copied clone URL: https://github.com/ruthwikreddy07/wpmmain.git');
+  const repo = window.getOmniDevRepo();
+  if (!repo) {
+    window.openRepoModal();
+    return;
+  }
+  const url = `https://github.com/${repo}.git`;
+  navigator.clipboard.writeText(url);
+  showToast('✓ Copied clone URL: ' + url);
 }
 
 function copyFileText() {
@@ -331,18 +336,35 @@ function switchBranch(branch) {
 }
 
 async function loadTree() {
+  const repo = window.getOmniDevRepo();
+  const repoTitleBtn = document.getElementById('repo-title-btn');
+  const repoNameText = document.getElementById('repo-name-text');
+  const heroRepoName = document.getElementById('hero-repo-name');
+  const breadcrumbRoot = document.getElementById('breadcrumb-root');
+
+  if (repo) {
+    repoNameText.textContent = repo;
+    repoTitleBtn.href = `https://github.com/${repo}`;
+    repoTitleBtn.target = '_blank';
+    heroRepoName.textContent = repo;
+    breadcrumbRoot.textContent = repo;
+    document.getElementById('hero-repo-desc').textContent =
+      `Connected GitHub repository tracked by OmniDev autonomous self-healing SRE engine.`;
+  } else {
+    repoNameText.textContent = 'Connect Target Repository';
+    repoTitleBtn.href = 'javascript:void(0)';
+    repoTitleBtn.target = '';
+    heroRepoName.textContent = 'No Repository Connected';
+    breadcrumbRoot.textContent = 'sandbox';
+    document.getElementById('hero-repo-desc').textContent =
+      `Click "Switch Repo" above to connect any public or private GitHub repository.`;
+  }
+
   try {
     const res = await fetch('/api/workspace/tree?dir=.');
     const data = await res.json();
     allFiles = data.files || [];
     document.getElementById('file-count').textContent = allFiles.length;
-    if (data.repo) {
-      document.getElementById('top-repo-text').textContent = data.repo;
-      document.getElementById('repo-name-text').textContent = data.repo;
-      document.getElementById('global-repo-pill').href = data.repo_url;
-      document.getElementById('repo-title-btn').href = data.repo_url;
-      document.getElementById('breadcrumb-root').textContent = data.repo;
-    }
     renderTree(allFiles);
   } catch(e) {
     document.getElementById('file-tree').innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;padding:8px;">Could not load file tree</div>';
@@ -466,6 +488,7 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+window.addEventListener('omnidev:repo-changed', loadTree);
 loadTree();
 </script>
 </body>

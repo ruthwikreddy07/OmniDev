@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from pathlib import Path
@@ -21,21 +21,32 @@ def mask_secret(val: str, prefix_len: int = 8, suffix_len: int = 5) -> str:
     return f"{val[:prefix_len]}{'•' * 14}{val[-suffix_len:]}"
 
 
-USER_PROFILE = {
-    "name": "D. Ruthwik Reddy",
-    "email": "ruthwikreddy07@gmail.com",
-    "role": "Principal SRE & AI Systems Architect",
-    "org": "OmniDev Autonomous Systems",
-    "timezone": "Asia/Kolkata (UTC+05:30)",
-    "avatar_initials": "RR",
-    "status": "Enterprise Lead"
+DEFAULT_USER_PROFILE = {
+    "name": "Operator (Guest)",
+    "email": "operator@omnidev.internal",
+    "role": "Autonomous SRE Operator",
+    "org": "OmniDev Cloud",
+    "timezone": "UTC (Dynamic)",
+    "avatar_initials": "OP",
+    "status": "Ready"
 }
+USER_PROFILE = dict(DEFAULT_USER_PROFILE)
+
+
+def resolve_target_repo(explicit: Optional[str] = None, header_repo: Optional[str] = None) -> Optional[str]:
+    if explicit and explicit.strip() and explicit.strip() != "null":
+        return explicit.strip()
+    if header_repo and header_repo.strip() and header_repo.strip() != "null":
+        return header_repo.strip()
+    return None
 
 
 class CreateJobRequest(BaseModel):
     task: str
     project_dir: str = "."
     api_key: str = ""
+    github_repo: Optional[str] = ""
+    github_token: Optional[str] = ""
 
 
 class RejectJobRequest(BaseModel):
@@ -67,8 +78,16 @@ async def head_root():
 
 
 @router.post("/api/jobs")
-async def create_job(req: CreateJobRequest):
-    job_id = job_manager.create_job(req.task, req.project_dir, req.api_key)
+async def create_job(req: CreateJobRequest, request: Request):
+    target_repo = resolve_target_repo(req.github_repo, request.headers.get("X-Target-Repo")) or ""
+    target_token = req.github_token or request.headers.get("X-GitHub-Token") or ""
+    job_id = job_manager.create_job(
+        task=req.task,
+        project_dir=req.project_dir,
+        api_key=req.api_key,
+        github_repo=target_repo,
+        github_token=target_token
+    )
     return {"job_id": job_id, "status": "queued"}
 
 
@@ -109,9 +128,6 @@ async def reject_job(job_id: str, req: RejectJobRequest):
 
 @router.post("/api/mcp")
 async def mcp_endpoint(req: dict):
-    """
-    Standard JSON-RPC 2.0 Model Context Protocol HTTP Endpoint.
-    """
     return mcp_server.handle_request(req)
 
 
@@ -130,10 +146,10 @@ async def github_webhook(payload: WebhookPayload):
 
     title = (issue.get("title") or "").strip()
     body = (issue.get("body") or "").strip()
-    repo_name = repo.get("full_name", "unknown")
+    repo_name = repo.get("full_name", "")
 
-    task = f"GitHub Issue from {repo_name}: {title}\n\n{body}"
-    job_id = job_manager.create_job(task, ".", "")
+    task = f"GitHub Issue from {repo_name or 'Repository'}: {title}\n\n{body}"
+    job_id = job_manager.create_job(task, ".", "", github_repo=repo_name)
     return {"status": "accepted", "job_id": job_id, "issue_title": title}
 
 
@@ -142,11 +158,12 @@ async def n8n_webhook(payload: dict):
     task = payload.get("task", "")
     project_dir = payload.get("project_dir", ".")
     api_key = payload.get("api_key", "")
+    repo = payload.get("repo", "") or payload.get("github_repo", "")
 
     if not task:
         raise HTTPException(status_code=400, detail="Missing 'task' field")
 
-    job_id = job_manager.create_job(task, project_dir, api_key)
+    job_id = job_manager.create_job(task, project_dir, api_key, github_repo=repo)
     return {"status": "accepted", "job_id": job_id}
 
 
@@ -161,12 +178,13 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
 
 
 @router.get("/api/workspace/tree")
-async def workspace_tree(dir: str = "."):
+async def workspace_tree(request: Request, dir: str = ".", repo: Optional[str] = None):
     try:
         raw_files = get_file_tree(dir)
         ignored_patterns = (
             ".pytest_cache", ".venv", "__pycache__", "omnidev.db",
-            ".git", ".idea", ".mypy_cache", ".env", ".docx", ".DS_Store", "build", "dist"
+            ".git", ".idea", ".mypy_cache", ".env", ".doc", ".docx", ".pdf",
+            ".DS_Store", "build", "dist", "tests"
         )
         filtered = []
         for f in raw_files:
@@ -174,27 +192,21 @@ async def workspace_tree(dir: str = "."):
             parts = norm.split("/")
             if any(p in ignored_patterns or p.startswith(".git") for p in parts):
                 continue
-            if norm.endswith(".db") or norm.endswith(".docx") or norm == ".env":
+            if norm.endswith(".db") or norm.endswith(".docx") or norm.endswith(".doc") or norm.endswith(".pdf") or ".env" in norm:
                 continue
             filtered.append(norm)
 
-        repo = os.environ.get("GITHUB_REPO", "ruthwikreddy07/wpmmain")
+        target_repo = resolve_target_repo(repo, request.headers.get("X-Target-Repo"))
         branch = os.environ.get("DEFAULT_BRANCH", "main")
         return {
-            "repo": repo,
-            "repo_url": f"https://github.com/{repo}",
+            "repo": target_repo,
+            "repo_url": f"https://github.com/{target_repo}" if target_repo else "",
             "branch": branch,
-            "branches": ["main", "omnidev/fix-zero-div", "omnidev/fix-webhook-4"],
-            "clone_url": f"https://github.com/{repo}.git",
-            "active_pr": {
-                "number": 3,
-                "title": "Autonomous Self-Healing: ZeroDivision & Webhook Sanitization",
-                "url": f"https://github.com/{repo}/pull/3",
-                "status": "open"
-            },
-            "commit": "a8f3b21",
-            "commit_msg": "fix(calculator): sanitize discount rate edge conditions",
-            "sync_status": "synced",
+            "branches": ["main", "staging", "dev"],
+            "clone_url": f"https://github.com/{target_repo}.git" if target_repo else "",
+            "commit": "HEAD",
+            "commit_msg": "Workspace synced",
+            "sync_status": "ready" if target_repo else "unconnected",
             "files": sorted(filtered)
         }
     except Exception as e:
@@ -205,8 +217,11 @@ async def workspace_tree(dir: str = "."):
 async def workspace_file(path: str):
     try:
         clean_path = path.replace("\\", "/")
-        if ".env" in clean_path.split("/") or "omnidev.db" in clean_path:
-            raise HTTPException(status_code=403, detail="Access denied to sensitive system file")
+        parts = clean_path.split("/")
+        forbidden = {".env", "omnidev.db", "tests", ".pytest_cache", ".venv", ".git", ".idea"}
+        if any(p in forbidden for p in parts) or clean_path.endswith(".doc") or clean_path.endswith(".docx") or clean_path.endswith(".pdf"):
+            raise HTTPException(status_code=403, detail="Access denied to protected file")
+
         file_path = Path(path).resolve()
         root_path = Path(".").resolve()
         if not str(file_path).startswith(str(root_path)):
@@ -234,7 +249,7 @@ async def workspace_file(path: str):
             "size": size,
             "lines": lines,
             "language": lang_map.get(ext, "text"),
-            "author": "ruthwikreddy07",
+            "author": "Workspace Contributor",
             "content": content
         }
     except HTTPException:
@@ -244,22 +259,22 @@ async def workspace_file(path: str):
 
 
 @router.post("/api/system/test-connection")
-async def test_connection(req: dict):
+async def test_connection(req: dict, request: Request):
     target = req.get("target", "github")
     if target == "github":
-        token = os.environ.get("GITHUB_TOKEN", "")
-        repo = os.environ.get("GITHUB_REPO", "ruthwikreddy07/wpmmain")
-        if not token:
-            return {"status": "error", "message": "GitHub personal access token not configured"}
+        token = req.get("token") or req.get("github_token") or request.headers.get("X-GitHub-Token") or os.environ.get("GITHUB_TOKEN", "")
+        repo = resolve_target_repo(req.get("repo") or req.get("github_repo"), request.headers.get("X-Target-Repo"))
+        if not repo:
+            return {"status": "error", "message": "No GitHub repository provided or connected"}
         return {
             "status": "ok",
             "message": f"Successfully verified connection to GitHub repo {repo}",
             "repo": repo,
             "branch": os.environ.get("DEFAULT_BRANCH", "main"),
-            "authenticated": True
+            "authenticated": bool(token)
         }
     elif target == "llm":
-        groq_key = os.environ.get("GROQ_API_KEY", "")
+        groq_key = req.get("key") or req.get("groq_api_key") or os.environ.get("GROQ_API_KEY", "")
         if not groq_key:
             return {"status": "error", "message": "Groq API key not configured"}
         return {
@@ -279,21 +294,21 @@ async def test_connection(req: dict):
 
 
 @router.get("/api/system/info")
-async def system_info():
-    repo = os.environ.get("GITHUB_REPO", "ruthwikreddy07/wpmmain")
-    token = os.environ.get("GITHUB_TOKEN", "")
+async def system_info(request: Request):
+    repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo"))
+    user_token = request.headers.get("X-GitHub-Token", "")
     groq = os.environ.get("GROQ_API_KEY", "")
     return {
         "repo": repo,
-        "repo_url": f"https://github.com/{repo}",
+        "repo_url": f"https://github.com/{repo}" if repo else None,
         "default_branch": os.environ.get("DEFAULT_BRANCH", "main"),
-        "github_token_configured": bool(token),
-        "github_token_masked": mask_secret(token, 8, 5),
+        "github_token_configured": bool(user_token),
+        "github_token_masked": "Configured in Session" if user_token else "Not configured",
         "groq_configured": bool(groq),
-        "groq_key_masked": mask_secret(groq, 8, 5),
-        "active_pr_url": "https://github.com/ruthwikreddy07/wpmmain/pull/3",
+        "groq_key_masked": "Managed by Server" if groq else "Not configured",
+        "active_pr_url": None,
         "n8n_webhook_url": os.environ.get("N8N_WEBHOOK_URL", "https://n8n-mr7m.onrender.com/webhook/omnidev-github-incident"),
-        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", "https://young-wolverine-15.loca.lt"),
+        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", "https://fuzzy-keys-show.loca.lt"),
         "port": int(os.environ.get("PORT", 4000)),
         "model": "openai/gpt-oss-20b",
         "llm_provider": "Groq API (Free Tier)",
@@ -304,32 +319,32 @@ async def system_info():
 
 
 @router.get("/api/telemetry")
-async def telemetry_data():
+async def telemetry_data(request: Request):
     stats = get_telemetry_stats()
-    repo = os.environ.get("GITHUB_REPO", "ruthwikreddy07/wpmmain")
+    repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo"))
     stats["repo"] = repo
-    stats["repo_url"] = f"https://github.com/{repo}"
-    stats["active_pr_url"] = "https://github.com/ruthwikreddy07/wpmmain/pull/3"
+    stats["repo_url"] = f"https://github.com/{repo}" if repo else None
+    stats["active_pr_url"] = None
     return stats
 
 
 @router.get("/api/settings")
-async def get_settings():
-    repo = os.environ.get("GITHUB_REPO", "ruthwikreddy07/wpmmain")
-    token = os.environ.get("GITHUB_TOKEN", "")
+async def get_settings(request: Request):
+    repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo"))
+    user_token = request.headers.get("X-GitHub-Token", "")
     groq = os.environ.get("GROQ_API_KEY", "")
     return {
         "user_profile": USER_PROFILE,
         "github_repo": repo,
-        "repo_url": f"https://github.com/{repo}",
+        "repo_url": f"https://github.com/{repo}" if repo else "",
         "default_branch": os.environ.get("DEFAULT_BRANCH", "main"),
-        "github_token_masked": mask_secret(token, 8, 5),
-        "groq_key_masked": mask_secret(groq, 8, 5),
-        "has_github_token": bool(token),
+        "github_token_masked": "Configured in Session" if user_token else "Not configured",
+        "groq_key_masked": "Managed by Server" if groq else "Not configured",
+        "has_github_token": bool(user_token),
         "has_groq_key": bool(groq),
         "n8n_webhook_url": os.environ.get("N8N_WEBHOOK_URL", "https://n8n-mr7m.onrender.com/webhook/omnidev-github-incident"),
-        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", "https://young-wolverine-15.loca.lt"),
-        "active_pr_url": "https://github.com/ruthwikreddy07/wpmmain/pull/3",
+        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", "https://fuzzy-keys-show.loca.lt"),
+        "active_pr_url": None,
         "port": int(os.environ.get("PORT", 4000)),
         "project_dir": ".",
         "model": "openai/gpt-oss-20b",
@@ -343,7 +358,7 @@ async def get_settings():
 
 @router.post("/api/settings")
 async def update_settings(req: SettingsUpdateRequest):
-    if req.github_repo:
+    if req.github_repo is not None:
         os.environ["GITHUB_REPO"] = req.github_repo.strip()
     if req.github_token and not req.github_token.startswith("•"):
         os.environ["GITHUB_TOKEN"] = req.github_token.strip()
@@ -365,5 +380,5 @@ async def update_settings(req: SettingsUpdateRequest):
         "status": "ok",
         "message": "Settings updated successfully",
         "profile": USER_PROFILE,
-        "repo": os.environ.get("GITHUB_REPO", "ruthwikreddy07/wpmmain")
+        "repo": os.environ.get("GITHUB_REPO", "")
     }

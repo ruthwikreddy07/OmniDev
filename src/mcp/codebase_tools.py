@@ -6,19 +6,25 @@ import difflib
 def search_files(root_dir: str | Path, query: str) -> list[dict[str, str]]:
     root_path = Path(root_dir).resolve()
     matches: list[dict[str, str]] = []
-    ignored_dirs = {'.venv', 'node_modules', '.git', '__pycache__', 'dist', '.gemini'}
+    ignored_dirs = {
+        '.venv', 'node_modules', '.git', '__pycache__', 'dist', '.gemini',
+        '.pytest_cache', '.mypy_cache', '.idea', 'build', 'tests'
+    }
+    ignored_extensions = {'.db', '.doc', '.docx', '.pdf', '.pyc', '.env'}
 
     for path in root_path.rglob('*'):
         if any(part in ignored_dirs for part in path.parts):
             continue
         if path.is_file():
+            if path.suffix in ignored_extensions or path.name.startswith('.env'):
+                continue
             if query.lower() in path.name.lower():
-                matches.append({'type': 'filename_match', 'path': str(path.relative_to(root_path))})
+                matches.append({'type': 'filename_match', 'path': str(path.relative_to(root_path)).replace('\\', '/')})
             else:
                 try:
                     content = path.read_text(encoding='utf-8', errors='ignore')
                     if query in content:
-                        matches.append({'type': 'content_match', 'path': str(path.relative_to(root_path))})
+                        matches.append({'type': 'content_match', 'path': str(path.relative_to(root_path)).replace('\\', '/')})
                 except Exception:
                     pass
     return matches
@@ -72,7 +78,11 @@ def apply_patch(file_path: str | Path, target_code: str, replacement_code: str) 
 
 def get_file_tree(root_dir: str | Path, max_depth: int = 3) -> list[str]:
     root_path = Path(root_dir).resolve()
-    ignored_dirs = {'.venv', 'node_modules', '.git', '__pycache__', 'dist', '.gemini'}
+    ignored_dirs = {
+        '.venv', 'node_modules', '.git', '__pycache__', 'dist', '.gemini',
+        '.pytest_cache', '.mypy_cache', '.idea', 'build', 'tests'
+    }
+    ignored_extensions = {'.db', '.doc', '.docx', '.pdf', '.pyc', '.env'}
     tree: list[str] = []
 
     def walk(dir_path: Path, depth: int):
@@ -83,9 +93,11 @@ def get_file_tree(root_dir: str | Path, max_depth: int = 3) -> list[str]:
         except PermissionError:
             return
         for entry in entries:
-            if entry.name in ignored_dirs:
+            if entry.name in ignored_dirs or any(part in ignored_dirs for part in entry.parts):
                 continue
-            rel = str(entry.relative_to(root_path))
+            if entry.suffix in ignored_extensions or entry.name.startswith('.env'):
+                continue
+            rel = str(entry.relative_to(root_path)).replace('\\', '/')
             if entry.is_dir():
                 tree.append(f"{rel}/")
                 walk(entry, depth + 1)

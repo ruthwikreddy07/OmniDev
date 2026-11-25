@@ -11,12 +11,14 @@ from src.server.database import save_job, get_job as db_get_job, list_jobs as db
 
 
 class JobManager:
-    def create_job(self, task: str, project_dir: str = ".", api_key: str = "") -> str:
+    def create_job(self, task: str, project_dir: str = ".", api_key: str = "", github_repo: str = "", github_token: str = "") -> str:
         job_id = str(uuid.uuid4())[:8]
         job_data = {
             "id": job_id,
             "task": task,
             "project_dir": project_dir,
+            "github_repo": github_repo.strip() if github_repo else "",
+            "github_token": github_token.strip() if github_token else "",
             "status": "queued",
             "result": None,
             "diffs": [],
@@ -73,8 +75,8 @@ class JobManager:
         if job["status"] not in ("awaiting_approval", "completed"):
             raise ValueError(f"Job cannot be approved in state: {job['status']}")
 
-        github_token = os.environ.get("GITHUB_TOKEN", "").strip()
-        github_repo = os.environ.get("GITHUB_REPO", "").strip()
+        github_token = (job.get("github_token") or os.environ.get("GITHUB_TOKEN", "")).strip()
+        github_repo = (job.get("github_repo") or os.environ.get("GITHUB_REPO", "")).strip()
 
         if not github_token or not github_repo:
             job["status"] = "approved_local_only"

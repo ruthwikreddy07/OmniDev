@@ -77,8 +77,8 @@ flowchart TD
 ### 2. Environment Setup
 ```bash
 # Clone repository
-git clone https://github.com/ruthwikreddy07/wpmmain.git
-cd wpmmain
+git clone https://github.com/ruthwikreddy07/OmniDev.git
+cd OmniDev
 
 # Create virtual environment
 python -m venv .venv
