@@ -317,12 +317,10 @@ async function loadJobs() {
     const data = await res.json();
     const jobs = data.jobs || [];
     const list = document.getElementById('jobs-list');
-    const empty = document.getElementById('empty-jobs');
     document.getElementById('job-count').textContent = jobs.length + ' incident' + (jobs.length !== 1 ? 's' : '');
     if (jobs.length === 0) {
-      empty.style.display = 'flex';
       const hasRepo = window.getOmniDevRepo && window.getOmniDevRepo();
-      empty.innerHTML = hasRepo ? `
+      list.innerHTML = `<div class="empty-state" id="empty-jobs" style="display:flex;">` + (hasRepo ? `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         <div class="empty-title">No incidents for ${escHtml(hasRepo)}</div>
         <div class="empty-desc">Click "Dispatch Agent" above to launch a self-healing task</div>
@@ -331,10 +329,9 @@ async function loadJobs() {
         <div class="empty-title">Connect a Repository to Begin</div>
         <div class="empty-desc">Select your GitHub repository to isolate and track autonomous fixes</div>
         <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openRepoModal()">+ Connect Repository</button>
-      `;
+      `) + `</div>`;
       return;
     }
-    empty.style.display = 'none';
     list.innerHTML = '';
     jobs.forEach(job => {
       const jid = job.id || job.job_id;
@@ -460,8 +457,28 @@ function connectWS(jobId) {
       else if (tag === 'THOUGHT') cls = 'log-msg-thought';
       stream.innerHTML += `<div class="log-line"><span class="log-tag">[${escHtml(tag)}]</span><span class="${cls}">${escHtml(text)}</span></div>`;
       stream.scrollTop = stream.scrollHeight;
-      if (tag === 'APPROVAL_REQUEST' || msg.type === 'approval_request') {
-        document.getElementById('approval-dock').style.display = 'flex';
+      if (tag === 'APPROVAL_REQUEST' || msg.type === 'approval_request' || tag === 'STATUS_CHANGE') {
+        loadJobs();
+        if (currentJobId) {
+          fetch('/api/jobs/' + currentJobId)
+            .then(r => r.ok ? r.json() : null)
+            .then(j => {
+              if (!j) return;
+              const st = statusBadgeMap[j.status] || { cls: 'badge-neutral', label: j.status };
+              document.getElementById('detail-status').innerHTML = '<span class="badge ' + st.cls + '"><span class="badge-dot"></span>' + st.label + '</span>';
+              const needsApproval = j.status === 'awaiting_approval' || j.status === 'pending_approval';
+              document.getElementById('approval-dock').style.display = needsApproval ? 'flex' : 'none';
+              const patchText = j.patch || (j.diffs && j.diffs.length ? j.diffs.map(d=>d.diff).join('\n') : '');
+              if (patchText && patchText.trim()) {
+                document.getElementById('diff-section').style.display = 'block';
+                document.getElementById('diff-body').innerHTML = patchText.split('\n').map(l => {
+                  if (l.startsWith('+')) return '<div class="diff-add">' + escHtml(l.substring(1)) + '</div>';
+                  if (l.startsWith('-')) return '<div class="diff-rem">' + escHtml(l.substring(1)) + '</div>';
+                  return '<div class="diff-ctx">' + escHtml(l) + '</div>';
+                }).join('');
+              }
+            }).catch(() => {});
+        }
       }
     } catch(err) {}
   };
