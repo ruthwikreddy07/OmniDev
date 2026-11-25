@@ -1,12 +1,12 @@
 from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from src.server.routes import router
-
-load_dotenv()
 
 app = FastAPI(
     title="OmniDev",

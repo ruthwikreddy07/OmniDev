@@ -1,4 +1,5 @@
 import os
+import httpx
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
@@ -7,7 +8,7 @@ from src.server.job_manager import job_manager
 from src.server.websocket_manager import ws_manager
 from src.mcp.mcp_server import MCPServer
 from src.mcp.codebase_tools import get_file_tree
-from src.server.database import get_telemetry_stats
+from src.server.database import get_telemetry_stats, get_db_engine_name
 
 router = APIRouter()
 mcp_server = MCPServer()
@@ -81,10 +82,11 @@ async def head_root():
 async def create_job(req: CreateJobRequest, request: Request):
     target_repo = resolve_target_repo(req.github_repo, request.headers.get("X-Target-Repo")) or ""
     target_token = req.github_token or request.headers.get("X-GitHub-Token") or ""
+    target_groq_key = req.api_key or request.headers.get("X-Groq-Api-Key") or ""
     job_id = job_manager.create_job(
         task=req.task,
         project_dir=req.project_dir,
-        api_key=req.api_key,
+        api_key=target_groq_key,
         github_repo=target_repo,
         github_token=target_token
     )
@@ -92,8 +94,11 @@ async def create_job(req: CreateJobRequest, request: Request):
 
 
 @router.get("/api/jobs")
-async def list_jobs():
-    return {"jobs": job_manager.list_jobs()}
+async def list_jobs(request: Request):
+    repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo"))
+    if not repo:
+        return {"jobs": []}
+    return {"jobs": job_manager.list_jobs(github_repo=repo)}
 
 
 @router.get("/api/jobs/{job_id}")
@@ -105,9 +110,11 @@ async def get_job(job_id: str):
 
 
 @router.post("/api/jobs/{job_id}/approve")
-async def approve_job(job_id: str):
+async def approve_job(job_id: str, request: Request):
     try:
-        result = await job_manager.approve_job(job_id)
+        token = request.headers.get("X-GitHub-Token", "")
+        repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo")) or ""
+        result = await job_manager.approve_job(job_id, github_token=token, github_repo=repo)
         return result
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -178,9 +185,55 @@ async def websocket_endpoint(websocket: WebSocket, job_id: str):
 
 
 @router.get("/api/workspace/tree")
-async def workspace_tree(request: Request, dir: str = ".", repo: Optional[str] = None):
+async def workspace_tree(request: Request, dir: str = ".", repo: Optional[str] = None, branch: Optional[str] = None):
     try:
-        raw_files = get_file_tree(dir)
+        target_repo = resolve_target_repo(repo, request.headers.get("X-Target-Repo"))
+        user_token = request.headers.get("X-GitHub-Token", "").strip()
+
+        if target_repo:
+            headers = {"Accept": "application/vnd.github.v3+json"}
+            if user_token:
+                headers["Authorization"] = f"token {user_token}"
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                repo_resp = await client.get(f"https://api.github.com/repos/{target_repo}", headers=headers)
+                if repo_resp.status_code == 404:
+                    raise HTTPException(status_code=404, detail=f"Repository '{target_repo}' not found or private (provide a GitHub PAT)")
+                if repo_resp.status_code in (401, 403):
+                    raise HTTPException(status_code=repo_resp.status_code, detail="GitHub API authentication or rate limit error")
+                repo_resp.raise_for_status()
+                repo_meta = repo_resp.json()
+                active_branch = (branch or repo_meta.get("default_branch") or "main").strip()
+
+                tree_resp = await client.get(
+                    f"https://api.github.com/repos/{target_repo}/git/trees/{active_branch}?recursive=1",
+                    headers=headers,
+                )
+                tree_resp.raise_for_status()
+                tree_data = tree_resp.json()
+                ignored_parts = (".git", "node_modules", ".venv", "__pycache__", ".pytest_cache")
+                files = []
+                for item in tree_data.get("tree", []):
+                    if item.get("type") == "blob":
+                        p = item.get("path", "")
+                        if any(part in ignored_parts for part in p.split("/")):
+                            continue
+                        files.append(p)
+                        if len(files) >= 500:
+                            break
+                return {
+                    "source": "github",
+                    "repo": target_repo,
+                    "repo_url": f"https://github.com/{target_repo}",
+                    "branch": active_branch,
+                    "branches": [active_branch],
+                    "clone_url": f"https://github.com/{target_repo}.git",
+                    "commit": (tree_data.get("sha") or "HEAD")[:7],
+                    "commit_msg": f"Synced from GitHub ({active_branch})",
+                    "sync_status": "synced",
+                    "files": sorted(files),
+                }
+
+        raw_files = get_file_tree(".")
         ignored_patterns = (
             ".pytest_cache", ".venv", "__pycache__", "omnidev.db",
             ".git", ".idea", ".mypy_cache", ".env", ".doc", ".docx", ".pdf",
@@ -196,60 +249,86 @@ async def workspace_tree(request: Request, dir: str = ".", repo: Optional[str] =
                 continue
             filtered.append(norm)
 
-        target_repo = resolve_target_repo(repo, request.headers.get("X-Target-Repo"))
-        branch = os.environ.get("DEFAULT_BRANCH", "main")
         return {
-            "repo": target_repo,
-            "repo_url": f"https://github.com/{target_repo}" if target_repo else "",
-            "branch": branch,
-            "branches": ["main", "staging", "dev"],
-            "clone_url": f"https://github.com/{target_repo}.git" if target_repo else "",
+            "source": "sandbox",
+            "repo": None,
+            "repo_url": "",
+            "branch": "main",
+            "branches": ["main"],
+            "clone_url": "",
             "commit": "HEAD",
-            "commit_msg": "Workspace synced",
-            "sync_status": "ready" if target_repo else "unconnected",
+            "commit_msg": "Local Sandbox Sample",
+            "sync_status": "unconnected",
             "files": sorted(filtered)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/api/workspace/file")
-async def workspace_file(path: str):
+async def workspace_file(request: Request, path: str, branch: Optional[str] = None):
     try:
-        clean_path = path.replace("\\", "/")
+        clean_path = path.replace("\\", "/").lstrip("/")
+        target_repo = resolve_target_repo(None, request.headers.get("X-Target-Repo"))
+        user_token = request.headers.get("X-GitHub-Token", "").strip()
+
+        lang_map = {
+            ".py": "python", ".json": "json", ".html": "html", ".css": "css",
+            ".js": "javascript", ".ts": "typescript", ".tsx": "typescript",
+            ".jsx": "javascript", ".md": "markdown", ".txt": "text",
+            ".yml": "yaml", ".yaml": "yaml", ".toml": "toml", ".sh": "bash"
+        }
+        ext = Path(clean_path).suffix.lower()
+
+        if target_repo:
+            headers = {"Accept": "application/vnd.github.v3.raw"}
+            if user_token:
+                headers["Authorization"] = f"token {user_token}"
+            ref_param = f"?ref={branch}" if branch else ""
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(
+                    f"https://api.github.com/repos/{target_repo}/contents/{clean_path}{ref_param}",
+                    headers=headers,
+                )
+                if resp.status_code == 404:
+                    raise HTTPException(status_code=404, detail="File not found in repository")
+                if resp.status_code in (401, 403):
+                    raise HTTPException(status_code=resp.status_code, detail="GitHub API access denied or rate limited")
+                resp.raise_for_status()
+                content = resp.text
+                return {
+                    "path": clean_path,
+                    "filename": Path(clean_path).name,
+                    "size": len(content.encode("utf-8", errors="ignore")),
+                    "lines": len(content.splitlines()),
+                    "language": lang_map.get(ext, "text"),
+                    "author": target_repo.split("/")[0],
+                    "content": content,
+                }
+
         parts = clean_path.split("/")
         forbidden = {".env", "omnidev.db", "tests", ".pytest_cache", ".venv", ".git", ".idea"}
-        if any(p in forbidden for p in parts) or clean_path.endswith(".doc") or clean_path.endswith(".docx") or clean_path.endswith(".pdf"):
+        if any(p in forbidden or p.startswith(".env") for p in parts) or clean_path.endswith(".doc") or clean_path.endswith(".docx") or clean_path.endswith(".pdf"):
             raise HTTPException(status_code=403, detail="Access denied to protected file")
 
-        file_path = Path(path).resolve()
+        file_path = Path(clean_path).resolve()
         root_path = Path(".").resolve()
-        if not str(file_path).startswith(str(root_path)):
+        if not file_path.is_relative_to(root_path):
             raise HTTPException(status_code=403, detail="Access denied")
         if not file_path.is_file():
             raise HTTPException(status_code=404, detail="File not found")
         content = file_path.read_text(encoding="utf-8", errors="ignore")
         size = file_path.stat().st_size
         lines = len(content.splitlines())
-        ext = file_path.suffix.lower()
-        lang_map = {
-            ".py": "python",
-            ".json": "json",
-            ".html": "html",
-            ".css": "css",
-            ".js": "javascript",
-            ".md": "markdown",
-            ".txt": "text",
-            ".yml": "yaml",
-            ".yaml": "yaml"
-        }
         return {
             "path": clean_path,
             "filename": file_path.name,
             "size": size,
             "lines": lines,
             "language": lang_map.get(ext, "text"),
-            "author": "Workspace Contributor",
+            "author": "Sandbox Sample",
             "content": content
         }
     except HTTPException:
@@ -274,9 +353,9 @@ async def test_connection(req: dict, request: Request):
             "authenticated": bool(token)
         }
     elif target == "llm":
-        groq_key = req.get("key") or req.get("groq_api_key") or os.environ.get("GROQ_API_KEY", "")
+        groq_key = req.get("key") or req.get("groq_api_key") or request.headers.get("X-Groq-Api-Key") or os.environ.get("GROQ_API_KEY", "")
         if not groq_key:
-            return {"status": "error", "message": "Groq API key not configured"}
+            return {"status": "error", "message": "Groq API key not configured. Enter your gsk_... key in Settings."}
         return {
             "status": "ok",
             "message": "Groq Cloud inference gateway verified (model: openai/gpt-oss-20b)",
@@ -313,6 +392,7 @@ async def system_info(request: Request):
         "model": "openai/gpt-oss-20b",
         "llm_provider": "Groq API (Free Tier)",
         "platform_status": "operational",
+        "db_engine": get_db_engine_name(),
         "tests_status": "17/17 passed",
         "user_profile": USER_PROFILE
     }
@@ -320,10 +400,23 @@ async def system_info(request: Request):
 
 @router.get("/api/telemetry")
 async def telemetry_data(request: Request):
-    stats = get_telemetry_stats()
     repo = resolve_target_repo(header_repo=request.headers.get("X-Target-Repo"))
+    if not repo:
+        return {
+            "total_jobs": 0,
+            "success_rate": 100.0,
+            "status_counts": {},
+            "pr_count": 0,
+            "recent_jobs": [],
+            "recent_logs": [],
+            "db_engine": get_db_engine_name(),
+            "repo": None,
+            "repo_url": None,
+            "active_pr_url": None,
+        }
+    stats = get_telemetry_stats(github_repo=repo)
     stats["repo"] = repo
-    stats["repo_url"] = f"https://github.com/{repo}" if repo else None
+    stats["repo_url"] = f"https://github.com/{repo}"
     stats["active_pr_url"] = None
     return stats
 
@@ -358,27 +451,16 @@ async def get_settings(request: Request):
 
 @router.post("/api/settings")
 async def update_settings(req: SettingsUpdateRequest):
-    if req.github_repo is not None:
-        os.environ["GITHUB_REPO"] = req.github_repo.strip()
-    if req.github_token and not req.github_token.startswith("•"):
-        os.environ["GITHUB_TOKEN"] = req.github_token.strip()
-    if req.groq_api_key and not req.groq_api_key.startswith("•"):
-        os.environ["GROQ_API_KEY"] = req.groq_api_key.strip()
-    if req.default_branch:
-        os.environ["DEFAULT_BRANCH"] = req.default_branch.strip()
-    if req.n8n_webhook_url:
-        os.environ["N8N_WEBHOOK_URL"] = req.n8n_webhook_url.strip()
-    if req.user_name:
-        USER_PROFILE["name"] = req.user_name.strip()
-    if req.user_email:
-        USER_PROFILE["email"] = req.user_email.strip()
-    if req.user_role:
-        USER_PROFILE["role"] = req.user_role.strip()
-    if req.user_org:
-        USER_PROFILE["org"] = req.user_org.strip()
+    # Architecture B: Settings are stored per-client in browser localStorage and sent via headers.
+    # Never mutate global server os.environ or shared USER_PROFILE across multi-tenant sessions.
     return {
         "status": "ok",
-        "message": "Settings updated successfully",
-        "profile": USER_PROFILE,
-        "repo": os.environ.get("GITHUB_REPO", "")
+        "message": "Session settings saved",
+        "profile": {
+            "name": req.user_name or DEFAULT_USER_PROFILE["name"],
+            "email": req.user_email or DEFAULT_USER_PROFILE["email"],
+            "role": req.user_role or DEFAULT_USER_PROFILE["role"],
+            "org": req.user_org or DEFAULT_USER_PROFILE["org"],
+        },
+        "repo": req.github_repo or ""
     }

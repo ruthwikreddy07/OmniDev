@@ -24,6 +24,12 @@ class AgentExecutor:
         if on_step:
             on_step(entry)
 
+    def _safe_path(self, fp: str) -> Path:
+        full = (self.project_dir / fp).resolve()
+        if not full.is_relative_to(self.project_dir):
+            raise PermissionError(f"Access denied: path '{fp}' escapes workspace root")
+        return full
+
     def execute_tool(self, tool_name: str, args: dict[str, Any]) -> Any:
         if tool_name == "search_files":
             results = search_files(self.project_dir, args.get("query", ""))
@@ -31,12 +37,12 @@ class AgentExecutor:
 
         elif tool_name == "read_file_lines":
             fp = args.get("file_path", "")
-            full = self.project_dir / fp
+            full = self._safe_path(fp)
             return {"file_path": fp, "content": read_file_lines(full, int(args.get("start_line", 1)), int(args.get("end_line", 50)))}
 
         elif tool_name == "apply_patch":
             fp = args.get("file_path", "")
-            full = self.project_dir / fp
+            full = self._safe_path(fp)
             result = apply_patch(full, args.get("target_code", ""), args.get("replacement_code", ""))
             self.diffs.append({
                 "file_path": fp,

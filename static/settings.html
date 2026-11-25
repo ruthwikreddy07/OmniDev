@@ -422,6 +422,7 @@ async function loadSettings() {
 
     const localRepo = window.getOmniDevRepo ? window.getOmniDevRepo() : '';
     const localToken = window.getOmniDevToken ? window.getOmniDevToken() : '';
+    const localGroqKey = window.getOmniDevGroqKey ? window.getOmniDevGroqKey() : '';
 
     if (localRepo) {
       document.getElementById('cfg-github-repo').value = localRepo;
@@ -435,6 +436,9 @@ async function loadSettings() {
     if (localToken) {
       document.getElementById('cfg-gh-token').value = localToken;
     }
+    if (localGroqKey) {
+      document.getElementById('cfg-groq-key').value = localGroqKey;
+    }
 
     const res = await fetch('/api/settings');
     const data = await res.json();
@@ -442,8 +446,8 @@ async function loadSettings() {
     if (data.default_branch) {
       document.getElementById('cfg-branch').value = data.default_branch;
     }
-    if (data.groq_key_masked && data.groq_key_masked !== 'Not configured') {
-      document.getElementById('cfg-groq-key').value = data.groq_key_masked;
+    if (!localGroqKey && data.has_groq_key) {
+      document.getElementById('cfg-groq-key').placeholder = 'Server fallback configured (or enter your own gsk_...)';
     }
     if (data.n8n_webhook_url) {
       document.getElementById('cfg-n8n').value = data.n8n_webhook_url;
@@ -505,8 +509,10 @@ async function saveAllSettings() {
 
   const repoVal = document.getElementById('cfg-github-repo').value.trim();
   const tokenVal = document.getElementById('cfg-gh-token').value.trim();
+  const groqVal = document.getElementById('cfg-groq-key').value.trim();
   if (window.setOmniDevRepo) window.setOmniDevRepo(repoVal);
   if (window.setOmniDevToken && !tokenVal.startsWith('•')) window.setOmniDevToken(tokenVal);
+  if (window.setOmniDevGroqKey && !groqVal.startsWith('•') && groqVal !== 'Managed by Server') window.setOmniDevGroqKey(groqVal);
 
   const payload = {
     user_name: profileObj.name,
@@ -516,7 +522,7 @@ async function saveAllSettings() {
     github_repo: repoVal,
     default_branch: document.getElementById('cfg-branch').value,
     github_token: tokenVal,
-    groq_api_key: document.getElementById('cfg-groq-key').value,
+    groq_api_key: groqVal,
     n8n_webhook_url: document.getElementById('cfg-n8n').value
   };
 

@@ -54,6 +54,18 @@
     }
   };
 
+  window.getOmniDevGroqKey = function() {
+    return localStorage.getItem('omnidev_groq_key') || '';
+  };
+
+  window.setOmniDevGroqKey = function(key) {
+    if (!key || !key.trim()) {
+      localStorage.removeItem('omnidev_groq_key');
+    } else {
+      localStorage.setItem('omnidev_groq_key', key.trim());
+    }
+  };
+
   window.getOmniDevProfile = function() {
     try {
       const saved = localStorage.getItem('omnidev_user_profile');
@@ -98,6 +110,7 @@
 
     let targetRepo = window.getOmniDevRepo();
     let targetToken = window.getOmniDevToken();
+    let targetGroqKey = window.getOmniDevGroqKey();
 
     // Support Headers instance or plain object
     if (init.headers instanceof Headers) {
@@ -107,12 +120,18 @@
       if (targetToken && !init.headers.has('X-GitHub-Token')) {
         init.headers.append('X-GitHub-Token', targetToken);
       }
+      if (targetGroqKey && !init.headers.has('X-Groq-Api-Key')) {
+        init.headers.append('X-Groq-Api-Key', targetGroqKey);
+      }
     } else if (typeof init.headers === 'object') {
       if (targetRepo && !init.headers['X-Target-Repo']) {
         init.headers['X-Target-Repo'] = targetRepo;
       }
       if (targetToken && !init.headers['X-GitHub-Token']) {
         init.headers['X-GitHub-Token'] = targetToken;
+      }
+      if (targetGroqKey && !init.headers['X-Groq-Api-Key']) {
+        init.headers['X-Groq-Api-Key'] = targetGroqKey;
       }
     }
 
@@ -331,9 +350,10 @@
   };
 
   window.resetOmniDevSession = function() {
-    if (confirm('Clear all local repository connections and reset session?')) {
+    if (confirm('Clear all local repository connections, API keys, and reset session?')) {
       localStorage.removeItem('omnidev_target_repo');
       localStorage.removeItem('omnidev_github_token');
+      localStorage.removeItem('omnidev_groq_key');
       localStorage.removeItem('omnidev_user_profile');
       window.location.reload();
     }

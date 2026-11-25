@@ -183,11 +183,11 @@
           <div class="int-icon" style="background:rgba(245,158,11,0.12);color:var(--warning);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
           </div>
-          <div><div class="int-name">SQLite Database</div><div class="int-type">Embedded Audit Store</div></div>
+          <div><div class="int-name" id="db-engine-name">PostgreSQL / SQLite</div><div class="int-type" id="db-engine-sub">Persistent Audit Store</div></div>
         </div>
-        <div class="int-desc">Persistent job execution logs, patch records, and telemetry states stored in <code>omnidev.db</code> with WAL mode support.</div>
+        <div class="int-desc">Persistent job execution logs, patch records, and telemetry states with automatic PostgreSQL (<code>DATABASE_URL</code>) and local SQLite fallback.</div>
         <div class="int-status-row">
-          <span class="badge badge-success"><span class="badge-dot"></span>Active (omnidev.db)</span>
+          <span class="badge badge-success"><span class="badge-dot"></span><span id="db-engine-badge">Active</span></span>
         </div>
         <div class="int-endpoint">Tables: jobs, logs</div>
       </div>
@@ -247,6 +247,10 @@ async function loadInfo() {
     }
     if (data.n8n_webhook_url) {
       document.getElementById('url-n8n-webhook').value = data.n8n_webhook_url;
+    }
+    if (data.db_engine) {
+      document.getElementById('db-engine-name').textContent = data.db_engine + ' Database';
+      document.getElementById('db-engine-badge').textContent = 'Active (' + data.db_engine + ')';
     }
   } catch(e) {}
 }

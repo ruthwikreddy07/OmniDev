@@ -363,8 +363,25 @@ async function loadTree() {
   try {
     const res = await fetch('/api/workspace/tree?dir=.');
     const data = await res.json();
+    if (!res.ok) {
+      allFiles = [];
+      document.getElementById('file-count').textContent = '0';
+      document.getElementById('file-tree').innerHTML = `<div style="color:var(--danger,#ef4444);font-size:12.5px;padding:10px;line-height:1.5;">${escapeHtml(data.detail || 'Could not load repository')}<br><button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="openRepoModal()">Switch Repo / Add Token</button></div>`;
+      return;
+    }
     allFiles = data.files || [];
     document.getElementById('file-count').textContent = allFiles.length;
+    if (data.branch) {
+      const bSel = document.getElementById('branch-select');
+      bSel.innerHTML = `<option value="${escapeHtml(data.branch)}" selected>${escapeHtml(data.branch)} (default)</option>`;
+      const sb = document.getElementById('stat-branch');
+      if (sb) sb.textContent = data.branch;
+    }
+    const shortcuts = document.getElementById('quick-file-shortcuts');
+    if (shortcuts && allFiles.length > 0) {
+      const picks = allFiles.filter(f => !f.endsWith('/')).slice(0, 4);
+      shortcuts.innerHTML = picks.map(p => `<button class="btn btn-ghost btn-sm" onclick="loadFile('${p.replace(/'/g, "\\'")}')">📄 ${escapeHtml(p)}</button>`).join('');
+    }
     renderTree(allFiles);
   } catch(e) {
     document.getElementById('file-tree').innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;padding:8px;">Could not load file tree</div>';
