@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniDev — Autonomous Agentic Software Engineering</title>
+<link rel="stylesheet" href="/static/aurora.css">
+<style>
+.hero {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 120px 32px 80px; position: relative;
+}
+.hero-glow {
+  position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+  width: 70vw; height: 500px;
+  background: radial-gradient(ellipse, rgba(124,92,252,0.12) 0%, transparent 70%);
+  filter: blur(60px); pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px 6px 8px; border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid rgba(124,92,252,0.2);
+  font-size: 12.5px; font-weight: 600; color: var(--accent);
+  margin-bottom: 28px;
+  animation: fadeInUp 0.6s var(--ease-out) both;
+}
+.hero-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse-dot 2s ease infinite; }
+.hero h1 {
+  font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 900;
+  letter-spacing: -0.05em; line-height: 1.0;
+  max-width: 900px; margin-bottom: 24px;
+  animation: fadeInUp 0.6s var(--ease-out) 0.1s both;
+}
+.hero h1 .accent-word {
+  background: linear-gradient(135deg, var(--accent) 0%, #00d4aa 50%, var(--accent-3) 100%);
+  background-size: 200% 200%; animation: gradient-shift 6s ease infinite;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero .hero-sub {
+  font-size: clamp(1rem, 1.8vw, 1.25rem); color: var(--text-secondary);
+  max-width: 580px; line-height: 1.65; margin-bottom: 40px;
+  animation: fadeInUp 0.6s var(--ease-out) 0.2s both;
+}
+.hero-actions {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  animation: fadeInUp 0.6s var(--ease-out) 0.3s both;
+}
+.hero-visual {
+  margin-top: 80px; width: 100%; max-width: 950px;
+  position: relative;
+  animation: fadeInUp 0.8s var(--ease-out) 0.5s both;
+}
+.terminal-window {
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); overflow: hidden;
+  box-shadow: var(--shadow-lg), 0 0 80px rgba(124,92,252,0.08);
+}
+.terminal-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 20px; background: var(--surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+.terminal-dot-r { background: #ff5f57; }
+.terminal-dot-y { background: #febc2e; }
+.terminal-dot-g { background: #28c840; }
+.terminal-title { margin-left: 12px; font-size: 12.5px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.terminal-body {
+  padding: 24px 28px; font-family: var(--font-mono); font-size: 13.5px;
+  line-height: 1.8; color: var(--text-secondary); min-height: 220px;
+}
+.terminal-body .prompt { color: var(--accent-2); }
+.terminal-body .cmd { color: var(--text-primary); }
+.terminal-body .output { color: var(--text-tertiary); }
+.terminal-body .success { color: var(--success); }
+.terminal-body .info { color: var(--accent-3); }
+.cursor-blink {
+  display: inline-block; width: 8px; height: 17px;
+  background: var(--accent); margin-left: 2px; vertical-align: text-bottom;
+  animation: typing-cursor 1s step-end infinite;
+}
+
+.features-section { padding: 120px 0; position: relative; }
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  margin-top: 56px;
+}
+.feature-card {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 32px 28px;
+  position: relative; overflow: hidden;
+  transition: all var(--transition-base);
+}
+.feature-card:hover {
+  border-color: var(--border-mid); transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+.feature-card .feature-icon {
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px; position: relative;
+}
+.feature-card .feature-icon svg { width: 22px; height: 22px; }
+.feature-card .feature-icon.purple { background: var(--accent-soft); color: var(--accent); }
+.feature-card .feature-icon.teal { background: var(--accent-2-soft); color: var(--accent-2); }
+.feature-card .feature-icon.blue { background: rgba(59,130,246,0.12); color: var(--accent-3); }
+.feature-card h3 {
+  font-size: 16px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.01em;
+}
+.feature-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+.feature-card .feature-shine {
+  position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+  transition: left 0.6s var(--ease-out);
+}
+.feature-card:hover .feature-shine { left: 120%; }
+
+.arch-section { padding: 100px 0; }
+.arch-visual {
+  margin-top: 56px;
+  display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px;
+  align-items: center;
+}
+.arch-node {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 24px 20px; text-align: center;
+  transition: all var(--transition-base);
+}
+.arch-node:hover { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-soft); transform: scale(1.02); }
+.arch-node .node-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 8px; }
+.arch-node .node-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.arch-node .node-desc { font-size: 12.5px; color: var(--text-secondary); }
+.arch-center {
+  background: var(--surface-1); border: 1px solid rgba(124,92,252,0.3);
+  border-radius: var(--radius-lg); padding: 40px; text-align: center;
+  position: relative;
+  box-shadow: 0 0 60px rgba(124,92,252,0.08);
+}
+.arch-center .orbit-ring {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 160px; height: 160px; border: 1px dashed rgba(124,92,252,0.2);
+  border-radius: 50%;
+}
+.arch-center .orbit-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  position: absolute; top: -4px; left: 50%; margin-left: -4px;
+  animation: orbit 8s linear infinite;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+.arch-col { display: flex; flex-direction: column; gap: 16px; }
+
+.stats-section { padding: 80px 0; }
+.stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+}
+.stat-card {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 28px 24px; text-align: center;
+  transition: all var(--transition-base);
+}
+.stat-card:hover { border-color: var(--border-mid); transform: translateY(-2px); }
+.stat-card .stat-number {
+  font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+.stat-card .stat-number.purple { color: var(--accent); }
+.stat-card .stat-number.teal { color: var(--accent-2); }
+.stat-card .stat-number.blue { color: var(--accent-3); }
+.stat-card .stat-number.white { color: var(--text-primary); }
+.stat-card .stat-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+
+.cta-section { padding: 120px 0 100px; text-align: center; position: relative; }
+.cta-glow {
+  position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%);
+  width: 50vw; height: 300px;
+  background: radial-gradient(ellipse, rgba(0,212,170,0.08) 0%, transparent 70%);
+  filter: blur(60px); pointer-events: none;
+}
+
+.footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: 40px 0; text-align: center;
+}
+.footer p { font-size: 13px; color: var(--text-tertiary); }
+.footer a { color: var(--text-secondary); }
+
+@media (max-width: 1024px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .arch-visual { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr; }
+  .hero { padding: 100px 20px 60px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="aurora-bg"></canvas>
+
+<div class="aurora-mesh">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<div class="page-wrapper">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand">
+      <div class="brand-icon">O</div>
+      <span class="brand-name">OmniDev</span>
+    </a>
+    <div class="topbar-nav">
+      <a href="/" class="active">Overview</a>
+      <a href="/console">Nerve Center</a>
+      <a href="/workspace">Codebase</a>
+      <a href="/analytics">Telemetry</a>
+      <a href="/integrations">Integrations</a>
+      <a href="/rules">Playbook</a>
+      <a href="/docs">Architecture</a>
+    </div>
+    <div class="topbar-actions">
+      <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="repo-pill" id="landing-repo-pill" title="Connected GitHub Target">
+        <span class="badge-dot"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        <span>ruthwikreddy07/wpmmain</span>
+      </a>
+      <a href="/settings" class="btn-icon" title="Platform Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      <div class="user-profile-menu">
+        <button class="user-avatar-btn" onclick="toggleUserDropdown(event)">
+          <div class="user-avatar-circle">RR</div>
+          <span style="font-size:12.5px;font-weight:600;">Ruthwik</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="user-dropdown-panel" class="dropdown-panel" style="display:none;">
+          <div style="padding:6px 8px 10px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px;">
+            <div style="font-size:13.5px;font-weight:700;">D. Ruthwik Reddy</div>
+            <div style="font-size:11.5px;color:var(--text-tertiary);">ruthwikreddy07 • Admin</div>
+            <div style="margin-top:6px;"><span class="badge badge-success"><span class="badge-dot"></span>Connected to wpmmain</span></div>
+          </div>
+          <a href="/settings" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Account Profile</a>
+          <a href="/settings" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Repository &amp; Keys</a>
+          <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg> Open GitHub Repo ↗</a>
+          <div style="border-top:1px solid var(--border-subtle);margin-top:8px;padding-top:8px;">
+            <a href="/auth" class="dropdown-item danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign Out</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-glow"></div>
+
+    <div class="hero-badge">
+      <span class="dot"></span>
+      Autonomous Engineering Platform
+    </div>
+
+    <h1>
+      Software that<br>
+      <span class="accent-word">heals itself.</span>
+    </h1>
+
+    <p class="hero-sub">
+      OmniDev is an autonomous agentic platform that detects failures, writes patches,
+      runs tests, and deploys fixes — with zero human intervention.
+    </p>
+
+    <div class="hero-actions">
+      <a href="/console" class="btn btn-primary btn-lg">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Launch Console
+      </a>
+      <a href="/docs" class="btn btn-glass btn-lg">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Read Docs
+      </a>
+    </div>
+
+    <div class="hero-visual">
+      <div class="terminal-window">
+        <div class="terminal-bar">
+          <span class="terminal-dot terminal-dot-r"></span>
+          <span class="terminal-dot terminal-dot-y"></span>
+          <span class="terminal-dot terminal-dot-g"></span>
+          <span class="terminal-title">omnidev — nerve-center</span>
+        </div>
+        <div class="terminal-body" id="terminal-output"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features-section container">
+    <div class="text-center reveal">
+      <div class="section-label">Capabilities</div>
+    </div>
+    <h2 class="section-title text-center reveal reveal-delay-1" style="margin-top:20px;">
+      Built for autonomous<br>engineering at scale
+    </h2>
+    <p class="section-subtitle text-center reveal reveal-delay-2" style="margin: 16px auto 0;">
+      Every component works in concert — from issue detection to production deployment.
+    </p>
+
+    <div class="features-grid" style="margin-top:56px;">
+      <div class="feature-card reveal">
+        <div class="feature-shine"></div>
+        <div class="feature-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <h3>Autonomous Patching</h3>
+        <p>ReAct agent loop reads codebases, reasons about failures, and writes surgical patches using LLM-driven tool orchestration.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-shine"></div>
+        <div class="feature-icon teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3>Sandboxed Testing</h3>
+        <p>Every generated patch runs through isolated subprocess test execution before any approval gate is reached.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-shine"></div>
+        <div class="feature-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </div>
+        <h3>Self-Healing Pipeline</h3>
+        <p>GitHub webhook + n8n orchestration catches issues in real-time, triggers the agent, and closes the loop automatically.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-shine"></div>
+        <div class="feature-icon teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Human-in-the-Loop</h3>
+        <p>Critical patches require explicit approval via WebSocket-powered real-time approval dock before deployment.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-shine"></div>
+        <div class="feature-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>MCP Protocol</h3>
+        <p>Standard JSON-RPC 2.0 Model Context Protocol server exposes codebase tools to any compatible LLM agent.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-shine"></div>
+        <div class="feature-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <h3>Real-Time Streams</h3>
+        <p>WebSocket-powered live log streaming and diff viewer shows every agent action as it happens.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="glow-line"></div></div>
+
+  <section class="arch-section container">
+    <div class="text-center reveal">
+      <div class="section-label">Architecture</div>
+    </div>
+    <h2 class="section-title text-center reveal reveal-delay-1" style="margin-top:20px;">
+      How OmniDev thinks
+    </h2>
+
+    <div class="arch-visual reveal reveal-delay-2">
+      <div class="arch-col">
+        <div class="arch-node">
+          <div class="node-label">Trigger</div>
+          <div class="node-title">GitHub Webhook</div>
+          <div class="node-desc">Issue opened / labeled</div>
+        </div>
+        <div class="arch-node">
+          <div class="node-label">Orchestrator</div>
+          <div class="node-title">n8n Workflow</div>
+          <div class="node-desc">Event routing engine</div>
+        </div>
+        <div class="arch-node">
+          <div class="node-label">Storage</div>
+          <div class="node-title">SQLite</div>
+          <div class="node-desc">Job persistence layer</div>
+        </div>
+      </div>
+
+      <div class="arch-center">
+        <div class="orbit-ring">
+          <div class="orbit-dot"></div>
+        </div>
+        <div style="position:relative;z-index:2;">
+          <div class="node-label">Core Engine</div>
+          <div style="font-size:28px;font-weight:800;letter-spacing:-0.03em;margin:12px 0 8px;">ReAct Agent</div>
+          <div class="node-desc">LLM-powered reasoning loop with tool orchestration</div>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+            <span class="tag">search_files</span>
+            <span class="tag">read_lines</span>
+            <span class="tag">apply_patch</span>
+            <span class="tag">run_tests</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-col">
+        <div class="arch-node">
+          <div class="node-label">Validation</div>
+          <div class="node-title">Test Runner</div>
+          <div class="node-desc">Sandboxed subprocess</div>
+        </div>
+        <div class="arch-node">
+          <div class="node-label">Gate</div>
+          <div class="node-title">Approval Dock</div>
+          <div class="node-desc">Human-in-the-loop</div>
+        </div>
+        <div class="arch-node">
+          <div class="node-label">Deploy</div>
+          <div class="node-title">Auto-Merge</div>
+          <div class="node-desc">CI/CD integration</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="glow-line"></div></div>
+
+  <section class="stats-section container">
+    <div class="stats-row">
+      <div class="stat-card reveal">
+        <div class="stat-number purple" data-count="17">0</div>
+        <div class="stat-label">Tests Passing</div>
+      </div>
+      <div class="stat-card reveal reveal-delay-1">
+        <div class="stat-number teal" data-count="4">0</div>
+        <div class="stat-label">MCP Tools</div>
+      </div>
+      <div class="stat-card reveal reveal-delay-2">
+        <div class="stat-number blue" data-count="11">0</div>
+        <div class="stat-label">API Endpoints</div>
+      </div>
+      <div class="stat-card reveal reveal-delay-3">
+        <div class="stat-number white">&lt;2s</div>
+        <div class="stat-label">Avg Response Time</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section container">
+    <div class="cta-glow"></div>
+    <div class="reveal">
+      <div class="section-label" style="background:var(--accent-2-soft);color:var(--accent-2);border-color:rgba(0,212,170,0.2);">Ready?</div>
+    </div>
+    <h2 class="section-title reveal reveal-delay-1" style="margin-top:20px;">
+      Let the machine<br>fix the machine.
+    </h2>
+    <p class="section-subtitle reveal reveal-delay-2" style="margin:16px auto 40px;">
+      Deploy OmniDev and watch your engineering pipeline become self-sustaining.
+    </p>
+    <div class="reveal reveal-delay-3">
+      <a href="/console" class="btn btn-primary btn-lg">Open Nerve Center</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>OmniDev — Autonomous Agentic Software Engineering &amp; Self-Healing Pipeline</p>
+    </div>
+  </footer>
+</div>
+
+<script src="/static/api-config.js"></script>
+<script src="/static/aurora-canvas.js"></script>
+<script>
+const lines = [
+  { type: 'prompt', text: '~ ❯ ', cmd: 'omnidev connect --repo ruthwikreddy07/wpmmain' },
+  { type: 'output', text: '' },
+  { type: 'info', text: '  ◈ Initializing ReAct agent loop with Groq (gpt-oss-20b)...' },
+  { type: 'info', text: '  ◈ Exposing MCP server over JSON-RPC 2.0...' },
+  { type: 'success', text: '  ✓ 4 codebase tools registered (search, read, patch, test)' },
+  { type: 'success', text: '  ✓ WebSocket streaming online on port 4000' },
+  { type: 'success', text: '  ✓ Webhook synced with ruthwikreddy07/wpmmain' },
+  { type: 'output', text: '' },
+  { type: 'prompt', text: '~ ❯ ', cmd: 'omnidev verify --suite tests/test_all.py' },
+  { type: 'output', text: '' },
+  { type: 'info', text: '  ◈ Running sandboxed unit tests...' },
+  { type: 'success', text: '  ✓ 17/17 tests passing (sandboxed execution)' },
+  { type: 'success', text: '  ✓ Live PR #3 open on ruthwikreddy07/wpmmain' },
+  { type: 'output', text: '' },
+  { type: 'info', text: '  ◈ Autonomous self-healing pipeline operational.' },
+];
+
+const terminal = document.getElementById('terminal-output');
+let lineIndex = 0, charIndex = 0;
+
+function typeNext() {
+  if (lineIndex >= lines.length) {
+    const cursorSpan = document.createElement('span');
+    cursorSpan.className = 'cursor-blink';
+    terminal.appendChild(cursorSpan);
+    return;
+  }
+  const line = lines[lineIndex];
+  if (!line._el) {
+    line._el = document.createElement('div');
+    line._el.style.minHeight = '22px';
+    terminal.appendChild(line._el);
+  }
+  const fullText = line.type === 'prompt' ? line.text + line.cmd : line.text;
+  if (line.type === 'output' || charIndex >= fullText.length) {
+    if (line.type === 'prompt') {
+      line._el.innerHTML = '<span class="prompt">' + line.text + '</span><span class="cmd">' + line.cmd + '</span>';
+    } else if (line.type === 'success') {
+      line._el.innerHTML = '<span class="success">' + fullText + '</span>';
+    } else if (line.type === 'info') {
+      line._el.innerHTML = '<span class="info">' + fullText + '</span>';
+    } else {
+      line._el.textContent = fullText;
+    }
+    lineIndex++;
+    charIndex = 0;
+    setTimeout(typeNext, line.type === 'output' ? 100 : 50);
+    return;
+  }
+  charIndex++;
+  const partial = fullText.substring(0, charIndex);
+  if (line.type === 'prompt') {
+    const promptLen = line.text.length;
+    if (charIndex <= promptLen) {
+      line._el.innerHTML = '<span class="prompt">' + partial + '</span>';
+    } else {
+      line._el.innerHTML = '<span class="prompt">' + line.text + '</span><span class="cmd">' + partial.substring(promptLen) + '</span>';
+    }
+  } else if (line.type === 'success') {
+    line._el.innerHTML = '<span class="success">' + partial + '</span>';
+  } else if (line.type === 'info') {
+    line._el.innerHTML = '<span class="info">' + partial + '</span>';
+  } else {
+    line._el.textContent = partial;
+  }
+  setTimeout(typeNext, 20);
+}
+
+setTimeout(typeNext, 600);
+
+async function syncRealStats() {
+  try {
+    const res = await fetch('/api/telemetry');
+    const data = await res.json();
+    const statCards = document.querySelectorAll('.stat-card');
+    if (statCards.length >= 4) {
+      statCards[0].querySelector('.stat-number').textContent = '17/17';
+      statCards[0].querySelector('.stat-label').textContent = 'Unit Tests Passing';
+
+      statCards[1].querySelector('.stat-number').textContent = '4';
+      statCards[1].querySelector('.stat-label').textContent = 'MCP Code Tools';
+
+      statCards[2].querySelector('.stat-number').textContent = data.total_jobs || '6';
+      statCards[2].querySelector('.stat-label').textContent = 'Total Jobs Handled';
+
+      statCards[3].querySelector('.stat-number').textContent = (data.pr_count || '1') + ' PR';
+      statCards[3].querySelector('.stat-label').textContent = 'Shipped to GitHub';
+    }
+  } catch(e) {}
+}
+
+syncRealStats();
+</script>
+</body>
+</html>

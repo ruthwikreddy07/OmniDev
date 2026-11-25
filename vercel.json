@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/console", "destination": "/static/console.html" },
+    { "source": "/workspace", "destination": "/static/workspace.html" },
+    { "source": "/analytics", "destination": "/static/analytics.html" },
+    { "source": "/integrations", "destination": "/static/integrations.html" },
+    { "source": "/rules", "destination": "/static/rules.html" },
+    { "source": "/docs", "destination": "/static/docs.html" },
+    { "source": "/settings", "destination": "/static/settings.html" },
+    { "source": "/auth", "destination": "/static/auth.html" },
+    { "source": "/", "destination": "/static/index.html" }
+  ]
+}

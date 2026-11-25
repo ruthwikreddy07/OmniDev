@@ -1,0 +1,221 @@
+{
+  "name": "OmniDev Autonomous SDE & GitHub PR Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "omnidev-github-incident",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "GitHub Issue Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1664,
+        176
+      ],
+      "webhookId": "omnidev-github-incident-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.action }}",
+              "operation": "contains",
+              "value2": "opened"
+            }
+          ]
+        }
+      },
+      "id": "filter-node",
+      "name": "Filter: Is New Issue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -1440,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend.onrender.com' }}/api/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"task\": \"GitHub Issue: \" + ($json.body.issue.title || \"Bug\") + \"\\n\\n\" + ($json.body.issue.body || \"\"),\n  \"project_dir\": \".\"\n}",
+        "options": {}
+      },
+      "id": "trigger-agent-node",
+      "name": "Trigger OmniDev Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1216,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "wait-node",
+      "name": "Wait for Agent Reasoning",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        -992,
+        160
+      ],
+      "webhookId": "omnidev-wait-step"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend.onrender.com' }}/api/jobs/{{ $('Trigger OmniDev Agent').item.json.job_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-status-node",
+      "name": "Check Job Status & Diffs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -784,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "awaiting_approval"
+            }
+          ]
+        }
+      },
+      "id": "approval-check-node",
+      "name": "Needs Human Approval?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend.onrender.com' }}/api/jobs/{{ $('Trigger OmniDev Agent').item.json.job_id }}/approve",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "approve-node",
+      "name": "Auto-Approve & Open GitHub PR",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -336,
+        144
+      ]
+    }
+  ],
+  "connections": {
+    "GitHub Issue Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter: Is New Issue?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: Is New Issue?": {
+      "main": [
+        [
+          {
+            "node": "Trigger OmniDev Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger OmniDev Agent": {
+      "main": [
+        [
+          {
+            "node": "Wait for Agent Reasoning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Agent Reasoning": {
+      "main": [
+        [
+          {
+            "node": "Check Job Status & Diffs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Job Status & Diffs": {
+      "main": [
+        [
+          {
+            "node": "Needs Human Approval?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Human Approval?": {
+      "main": [
+        [
+          {
+            "node": "Auto-Approve & Open GitHub PR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {}
+}

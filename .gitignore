@@ -1,0 +1,106 @@
+# ==============================================================================
+# OmniDev — Autonomous Engineering Platform Git Ignore
+# ==============================================================================
+
+# Entire Tests Directory (Explicitly Excluded)
+tests/
+
+# Markdown Files: Ignore all except README.md
+*.md
+!README.md
+!readme.md
+
+# Documentation & Office Files
+*.doc
+*.docx
+*.pdf
+
+# Python Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Python Bytecode & Runtime Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing & Coverage Artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.tox/
+.nox/
+
+# Type Checking & Linting
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# Local Database Stores & WAL Journals
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+omnidev.db
+
+# Node.js & Package Managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# Build Outputs & Packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Vercel & Deployment Cache
+.vercel/
+
+# IDE & Editor Metadata
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.directory
+
+# Operating System Metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Temporary & Scratch Files
+*.log
+scratch/
+tmp/
+temp/

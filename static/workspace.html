@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniDev — Codebase Explorer</title>
+<link rel="stylesheet" href="/static/aurora.css">
+<style>
+.repo-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px; background: rgba(13, 17, 26, 0.85);
+  border-bottom: 1px solid var(--border-subtle); backdrop-filter: blur(12px);
+  position: sticky; top: 64px; z-index: 50; flex-wrap: wrap; gap: 12px;
+}
+.repo-toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.repo-title-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: #fff;
+  text-decoration: none; padding: 4px 8px; border-radius: 6px;
+  background: var(--surface-2); border: 1px solid var(--border-subtle);
+  transition: all var(--transition-fast);
+}
+.repo-title-link:hover { border-color: var(--accent); background: var(--surface-3); }
+.branch-picker {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; background: var(--surface-1);
+  border: 1px solid var(--border-subtle); border-radius: 6px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);
+}
+.branch-picker select {
+  background: transparent; border: none; color: var(--text-primary);
+  font-family: var(--font-mono); font-size: 12px; outline: none; cursor: pointer;
+}
+.repo-toolbar-right { display: flex; align-items: center; gap: 10px; }
+
+.explorer-layout {
+  display: grid; grid-template-columns: 300px 1fr;
+  min-height: calc(100vh - 120px);
+}
+.file-tree-panel {
+  border-right: 1px solid var(--border-subtle); padding: 16px;
+  background: rgba(10,13,20,0.65); backdrop-filter: blur(10px);
+  overflow-y: auto; height: calc(100vh - 120px); position: sticky; top: 120px;
+}
+.tree-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle);
+}
+.tree-header h3 {
+  font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-tertiary); margin: 0;
+}
+.tree-search {
+  width: 100%; padding: 8px 12px 8px 32px;
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-family: var(--font-sans); font-size: 13px; outline: none;
+  margin-bottom: 12px; transition: border var(--transition-fast);
+  background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235a6175' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 10px center;
+}
+.tree-search:focus { border-color: var(--accent); }
+.tree-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 6px;
+  font-size: 13px; color: var(--text-secondary);
+  cursor: pointer; transition: all var(--transition-fast);
+  text-decoration: none; user-select: none;
+}
+.tree-item:hover { background: var(--surface-2); color: var(--text-primary); }
+.tree-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.tree-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+.tree-folder > .tree-children { padding-left: 14px; }
+.tree-toggle {
+  width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary); transition: transform var(--transition-fast); flex-shrink: 0;
+}
+.tree-toggle.open { transform: rotate(90deg); }
+
+.code-viewer-panel { padding: 24px 32px; overflow-x: hidden; }
+.file-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; background: var(--surface-1);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  margin-bottom: 0; flex-wrap: wrap; gap: 10px;
+}
+.file-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; font-family: var(--font-mono); }
+.file-breadcrumb span { color: var(--text-tertiary); }
+.file-breadcrumb .current { color: #fff; font-weight: 600; }
+.file-meta-badges { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.code-content {
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: 16px 0; font-family: var(--font-mono); font-size: 13px;
+  line-height: 1.8; overflow-x: auto; min-height: 480px;
+}
+.code-line { display: flex; padding: 0 20px; transition: background var(--transition-fast); }
+.code-line:hover { background: rgba(124,92,252,0.06); }
+.code-line .ln {
+  min-width: 48px; text-align: right; padding-right: 18px;
+  color: var(--text-tertiary); user-select: none; opacity: 0.5;
+  border-right: 1px solid var(--border-subtle); margin-right: 18px;
+}
+.code-line .code { color: var(--text-primary); white-space: pre; font-size: 12.5px; }
+
+.repo-card {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 32px; max-width: 860px; margin: 20px auto;
+}
+.repo-hero-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.repo-hero-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
+.repo-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-box {
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); padding: 14px;
+}
+.stat-box .stat-label { font-size: 11.5px; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 4px; }
+.stat-box .stat-val { font-size: 18px; font-weight: 700; color: #fff; font-family: var(--font-mono); }
+
+.toast-msg {
+  position: fixed; bottom: 24px; right: 24px;
+  background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent);
+  color: #fff; padding: 10px 18px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  display: none; z-index: 9999; animation: fadeIn 0.2s ease;
+}
+
+@media (max-width: 1024px) {
+  .explorer-layout { grid-template-columns: 1fr; }
+  .file-tree-panel { position: static; height: auto; max-height: 280px; }
+  .repo-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<canvas id="aurora-bg"></canvas>
+
+<div class="page-wrapper">
+  <!-- Unified Topbar -->
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><div class="brand-icon">O</div><span class="brand-name">OmniDev</span></a>
+    <div class="topbar-nav">
+      <a href="/">Overview</a>
+      <a href="/console">Nerve Center</a>
+      <a href="/workspace" class="active">Codebase</a>
+      <a href="/analytics">Telemetry</a>
+      <a href="/integrations">Integrations</a>
+      <a href="/rules">Playbook</a>
+      <a href="/docs">Architecture</a>
+    </div>
+    <div class="topbar-actions">
+      <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="repo-pill" id="global-repo-pill" title="Connected GitHub Target">
+        <span class="badge-dot"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        <span id="top-repo-text">ruthwikreddy07/wpmmain</span>
+      </a>
+      <a href="/settings" class="btn-icon" title="Platform Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      <div class="user-profile-menu">
+        <button class="user-avatar-btn" onclick="toggleUserDropdown(event)">
+          <div class="user-avatar-circle">RR</div>
+          <span style="font-size:12.5px;font-weight:600;">Ruthwik</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="user-dropdown-panel" class="dropdown-panel" style="display:none;">
+          <div style="padding:6px 8px 10px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px;">
+            <div style="font-size:13.5px;font-weight:700;">D. Ruthwik Reddy</div>
+            <div style="font-size:11.5px;color:var(--text-tertiary);">ruthwikreddy07 • Admin</div>
+            <div style="margin-top:6px;"><span class="badge badge-success"><span class="badge-dot"></span>Connected to wpmmain</span></div>
+          </div>
+          <a href="/settings#profile" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Account Profile</a>
+          <a href="/settings#credentials" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Repository &amp; Keys</a>
+          <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg> Open GitHub Repo ↗</a>
+          <div style="border-top:1px solid var(--border-subtle);margin-top:8px;padding-top:8px;">
+            <a href="/auth" class="dropdown-item danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign Out</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- GitHub Repository Secondary Toolbar -->
+  <div class="repo-toolbar">
+    <div class="repo-toolbar-left">
+      <a id="repo-title-btn" href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="repo-title-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        <span id="repo-name-text">ruthwikreddy07/wpmmain</span>
+        <span style="font-size:11px;color:var(--text-tertiary);">↗</span>
+      </a>
+
+      <div class="branch-picker">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+        <select id="branch-select" onchange="switchBranch(this.value)">
+          <option value="main" selected>main (default)</option>
+          <option value="omnidev/fix-zero-div">omnidev/fix-zero-div</option>
+          <option value="omnidev/fix-webhook-4">omnidev/fix-webhook-4</option>
+        </select>
+      </div>
+
+      <span class="badge badge-success"><span class="badge-dot"></span>Synced · commit #a8f3b21</span>
+      <a href="https://github.com/ruthwikreddy07/wpmmain/pull/3" target="_blank" class="badge badge-info" style="text-decoration:none;cursor:pointer;">
+        Active PR #3 Open ↗
+      </a>
+    </div>
+
+    <div class="repo-toolbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="copyCloneUrl()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Clone HTTPS
+      </button>
+      <a href="/settings#credentials" class="btn btn-ghost btn-sm" title="Edit Repository or PAT Token">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Switch Repo / Keys
+      </a>
+      <a href="/console" class="btn btn-primary btn-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Dispatch Incident Fix
+      </a>
+    </div>
+  </div>
+
+  <div class="content-offset" style="padding-top:0;">
+    <div class="explorer-layout">
+      <!-- File Explorer Tree Panel -->
+      <div class="file-tree-panel">
+        <div class="tree-header">
+          <h3>Tracked Files (<span id="file-count">...</span>)</h3>
+          <button class="btn-icon" style="width:28px;height:28px;" onclick="loadTree()" title="Refresh File Tree">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+        <input type="text" class="tree-search" placeholder="Filter tracked repository files..." oninput="filterTree(this.value)">
+        <div id="file-tree"></div>
+      </div>
+
+      <!-- Code Viewer Panel -->
+      <div class="code-viewer-panel">
+        <div id="viewer-empty">
+          <div class="repo-card animate-in">
+            <div class="repo-hero-title">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              ruthwikreddy07/wpmmain
+            </div>
+            <div class="repo-hero-desc">
+              Connected GitHub repository tracked by OmniDev autonomous self-healing SRE engine.
+              All pull requests, branches, and surgical fixes originate from this workspace.
+            </div>
+
+            <div class="repo-stats-grid">
+              <div class="stat-box">
+                <div class="stat-label">Active Branch</div>
+                <div class="stat-val" style="color:var(--accent);">main</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Test Suite Health</div>
+                <div class="stat-val" style="color:var(--success);">17 / 17 OK</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Pull Requests</div>
+                <div class="stat-val" style="color:var(--accent-2);">PR #3 Live</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Target Language</div>
+                <div class="stat-val">Python 100%</div>
+              </div>
+            </div>
+
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">
+              Quick File Shortcuts
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-ghost btn-sm" onclick="loadFile('src/sample_app/calculator.py')">📄 src/sample_app/calculator.py</button>
+              <button class="btn btn-ghost btn-sm" onclick="loadFile('src/sample_app/test_calculator.py')">🧪 test_calculator.py</button>
+              <button class="btn btn-ghost btn-sm" onclick="loadFile('src/server/routes.py')">⚡ src/server/routes.py</button>
+              <button class="btn btn-ghost btn-sm" onclick="loadFile('requirements.txt')">📦 requirements.txt</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="viewer-content" style="display:none;" class="animate-in">
+          <div class="file-header">
+            <div class="file-breadcrumb">
+              <span id="breadcrumb-root">ruthwikreddy07/wpmmain</span>
+              <span>/</span>
+              <span class="current" id="file-title">filename</span>
+            </div>
+            <div class="file-meta-badges">
+              <span class="tag" id="file-lang">PYTHON</span>
+              <span class="tag" id="file-lines">0 lines</span>
+              <span class="tag" id="file-size">0 KB</span>
+              <span class="tag" style="background:var(--accent-soft);color:var(--accent);">Author: ruthwikreddy07</span>
+              <button class="btn btn-ghost btn-sm" onclick="copyFileText()" style="padding:4px 8px;font-size:11px;">Copy Code</button>
+            </div>
+          </div>
+          <div class="code-content" id="code-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast-msg">Copied to clipboard!</div>
+
+<script src="/static/api-config.js"></script>
+<script src="/static/aurora-canvas.js"></script>
+<script>
+let allFiles = [];
+let currentFileText = "";
+let currentFilePath = "";
+
+function showToast(text) {
+  const t = document.getElementById('toast');
+  t.textContent = text;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+function copyCloneUrl() {
+  navigator.clipboard.writeText('https://github.com/ruthwikreddy07/wpmmain.git');
+  showToast('✓ Copied clone URL: https://github.com/ruthwikreddy07/wpmmain.git');
+}
+
+function copyFileText() {
+  if (!currentFileText) return;
+  navigator.clipboard.writeText(currentFileText);
+  showToast('✓ Copied ' + currentFilePath + ' code to clipboard');
+}
+
+function switchBranch(branch) {
+  showToast('Switched to branch: ' + branch);
+}
+
+async function loadTree() {
+  try {
+    const res = await fetch('/api/workspace/tree?dir=.');
+    const data = await res.json();
+    allFiles = data.files || [];
+    document.getElementById('file-count').textContent = allFiles.length;
+    if (data.repo) {
+      document.getElementById('top-repo-text').textContent = data.repo;
+      document.getElementById('repo-name-text').textContent = data.repo;
+      document.getElementById('global-repo-pill').href = data.repo_url;
+      document.getElementById('repo-title-btn').href = data.repo_url;
+      document.getElementById('breadcrumb-root').textContent = data.repo;
+    }
+    renderTree(allFiles);
+  } catch(e) {
+    document.getElementById('file-tree').innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;padding:8px;">Could not load file tree</div>';
+  }
+}
+
+function renderTree(files) {
+  const tree = {};
+  files.forEach(f => {
+    const parts = f.replace(/\\/g, '/').split('/');
+    let node = tree;
+    parts.forEach((p, i) => {
+      if (i === parts.length - 1) {
+        if (!node._files) node._files = [];
+        node._files.push({ name: p, path: f });
+      } else {
+        if (!node[p]) node[p] = {};
+        node = node[p];
+      }
+    });
+  });
+
+  const container = document.getElementById('file-tree');
+  container.innerHTML = '';
+  renderNode(tree, container, '');
+}
+
+function renderNode(node, parentEl, currentPath) {
+  const keys = Object.keys(node).filter(k => k !== '_files').sort();
+  keys.forEach(k => {
+    const folderPath = currentPath ? currentPath + '/' + k : k;
+    const folderDiv = document.createElement('div');
+    folderDiv.className = 'tree-folder';
+
+    const header = document.createElement('div');
+    header.className = 'tree-item';
+    header.innerHTML = `
+      <span class="tree-toggle open">▶</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>${k}</span>
+    `;
+
+    const children = document.createElement('div');
+    children.className = 'tree-children';
+
+    header.onclick = () => {
+      const toggle = header.querySelector('.tree-toggle');
+      toggle.classList.toggle('open');
+      children.style.display = toggle.classList.contains('open') ? 'block' : 'none';
+    };
+
+    folderDiv.appendChild(header);
+    folderDiv.appendChild(children);
+    parentEl.appendChild(folderDiv);
+
+    renderNode(node[k], children, folderPath);
+  });
+
+  if (node._files) {
+    node._files.sort((a,b) => a.name.localeCompare(b.name)).forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'tree-item';
+      item.dataset.path = f.path;
+
+      let icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>';
+      if (f.name.endsWith('.py')) {
+        icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#3b82f6;"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+      } else if (f.name.endsWith('.json')) {
+        icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#10b981;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+      } else if (f.name.endsWith('.md')) {
+        icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#f59e0b;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+      }
+
+      item.innerHTML = `${icon}<span>${f.name}</span>`;
+      item.onclick = (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        loadFile(f.path);
+      };
+      parentEl.appendChild(item);
+    });
+  }
+}
+
+function filterTree(q) {
+  q = q.trim().toLowerCase();
+  if (!q) { renderTree(allFiles); return; }
+  const filtered = allFiles.filter(f => f.toLowerCase().includes(q));
+  renderTree(filtered);
+}
+
+async function loadFile(filePath) {
+  try {
+    const res = await fetch('/api/workspace/file?path=' + encodeURIComponent(filePath));
+    if (!res.ok) throw new Error('File not accessible');
+    const data = await res.json();
+    currentFileText = data.content;
+    currentFilePath = data.path;
+
+    document.getElementById('viewer-empty').style.display = 'none';
+    document.getElementById('viewer-content').style.display = 'block';
+    document.getElementById('file-title').textContent = data.path;
+    document.getElementById('file-lang').textContent = (data.language || 'TEXT').toUpperCase();
+    document.getElementById('file-lines').textContent = data.lines + ' lines';
+    document.getElementById('file-size').textContent = (data.size / 1024).toFixed(1) + ' KB';
+
+    const lines = data.content.split('\n');
+    let html = '';
+    lines.forEach((l, i) => {
+      const escaped = escapeHtml(l);
+      html += `<div class="code-line"><span class="ln">${i + 1}</span><span class="code">${escaped || ' '}</span></div>`;
+    });
+    document.getElementById('code-content').innerHTML = html;
+  } catch(e) {
+    alert('Could not open file: ' + e.message);
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+loadTree();
+</script>
+</body>
+</html>

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniDev — Platform Settings & User Profile</title>
+<link rel="stylesheet" href="/static/aurora.css">
+<style>
+.settings-layout { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 64px); }
+.settings-sidebar {
+  border-right: 1px solid var(--border-subtle); padding: 24px 16px;
+  background: rgba(10,13,20,0.65); backdrop-filter: blur(10px);
+  position: sticky; top: 64px; height: calc(100vh - 64px);
+}
+.settings-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 13.5px; color: var(--text-secondary);
+  cursor: pointer; transition: all var(--transition-fast);
+  text-decoration: none; margin-bottom: 4px;
+}
+.settings-nav-item:hover { background: var(--surface-2); color: var(--text-primary); }
+.settings-nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.settings-nav-item svg { width: 16px; height: 16px; opacity: 0.8; flex-shrink: 0; }
+
+.settings-content { padding: 36px 48px; max-width: 800px; }
+.settings-section { margin-bottom: 44px; display: none; }
+.settings-section.active { display: block; }
+.settings-section-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.settings-section-desc { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 24px; }
+
+.profile-hero {
+  display: flex; align-items: center; gap: 20px;
+  padding: 24px; background: var(--surface-1);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+  margin-bottom: 28px;
+}
+.profile-avatar-large {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; color: #fff;
+  box-shadow: 0 0 24px var(--accent-soft); flex-shrink: 0;
+}
+
+.settings-field { margin-bottom: 22px; }
+.settings-field label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 6px;
+}
+.settings-field .input-wrap { display: flex; align-items: center; gap: 8px; }
+.settings-field input[type="text"],
+.settings-field input[type="password"],
+.settings-field input[type="email"],
+.settings-field input[type="number"],
+.settings-field select {
+  flex: 1; padding: 10px 14px;
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-family: var(--font-sans); font-size: 14px;
+  outline: none; transition: border var(--transition-fast);
+}
+.settings-field input:focus, .settings-field select:focus { border-color: var(--accent); }
+.settings-field .hint { font-size: 12px; color: var(--text-tertiary); margin-top: 5px; }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 14px; font-weight: 600; }
+.toggle-desc { font-size: 12.5px; color: var(--text-tertiary); margin-top: 2px; }
+
+.toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; cursor: pointer;
+  background: var(--surface-3); border-radius: 12px;
+  transition: background var(--transition-fast);
+}
+.toggle-slider::before {
+  content: ''; position: absolute; width: 18px; height: 18px;
+  left: 3px; top: 3px; border-radius: 50%;
+  background: var(--text-secondary); transition: all var(--transition-fast);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); background: #fff; }
+
+.connection-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-radius: 8px; margin-top: 10px;
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.connection-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+.toast-msg {
+  position: fixed; bottom: 24px; right: 24px;
+  background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent);
+  color: #fff; padding: 12px 20px; border-radius: 8px;
+  font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  display: none; z-index: 9999; animation: fadeIn 0.2s ease;
+}
+
+@media (max-width: 1024px) {
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-sidebar { display: flex; overflow-x: auto; position: static; height: auto; padding: 12px; }
+  .settings-nav-item { white-space: nowrap; }
+  .settings-content { padding: 24px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="aurora-bg"></canvas>
+
+<div class="page-wrapper">
+  <!-- Unified Topbar -->
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><div class="brand-icon">O</div><span class="brand-name">OmniDev</span></a>
+    <div class="topbar-nav">
+      <a href="/">Overview</a>
+      <a href="/console">Nerve Center</a>
+      <a href="/workspace">Codebase</a>
+      <a href="/analytics">Telemetry</a>
+      <a href="/integrations">Integrations</a>
+      <a href="/rules">Playbook</a>
+      <a href="/docs">Architecture</a>
+    </div>
+    <div class="topbar-actions">
+      <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="repo-pill" id="global-repo-pill" title="Connected GitHub Target">
+        <span class="badge-dot"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        <span id="top-repo-text">ruthwikreddy07/wpmmain</span>
+      </a>
+      <a href="/settings" class="btn-icon active" title="Platform Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      <div class="user-profile-menu">
+        <button class="user-avatar-btn" onclick="toggleUserDropdown(event)">
+          <div class="user-avatar-circle">RR</div>
+          <span style="font-size:12.5px;font-weight:600;">Ruthwik</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="user-dropdown-panel" class="dropdown-panel" style="display:none;">
+          <div style="padding:6px 8px 10px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px;">
+            <div style="font-size:13.5px;font-weight:700;">D. Ruthwik Reddy</div>
+            <div style="font-size:11.5px;color:var(--text-tertiary);">ruthwikreddy07 • Admin</div>
+            <div style="margin-top:6px;"><span class="badge badge-success"><span class="badge-dot"></span>Connected to wpmmain</span></div>
+          </div>
+          <a href="#profile" onclick="switchTab('profile')" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Account Profile</a>
+          <a href="#credentials" onclick="switchTab('credentials')" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Repository &amp; Keys</a>
+          <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg> Open GitHub Repo ↗</a>
+          <div style="border-top:1px solid var(--border-subtle);margin-top:8px;padding-top:8px;">
+            <a href="/auth" class="dropdown-item danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign Out</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="content-offset" style="padding-top:64px;">
+    <div class="settings-layout">
+      <!-- Sidebar Tabs -->
+      <div class="settings-sidebar">
+        <a class="settings-nav-item active" onclick="switchTab('profile')" href="#profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          User Profile
+        </a>
+        <a class="settings-nav-item" onclick="switchTab('credentials')" href="#credentials">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Git &amp; API Keys
+        </a>
+        <a class="settings-nav-item" onclick="switchTab('ingress')" href="#ingress">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Ingress &amp; Webhooks
+        </a>
+        <a class="settings-nav-item" onclick="switchTab('agent')" href="#agent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Autonomous Safety
+        </a>
+        <a class="settings-nav-item" onclick="switchTab('danger')" href="#danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Danger Zone
+        </a>
+      </div>
+
+      <!-- Settings Content Panels -->
+      <div class="settings-content animate-in">
+        <!-- 1. USER PROFILE TAB -->
+        <div class="settings-section active" id="sec-profile">
+          <div class="settings-section-title">Operator Profile &amp; Organization</div>
+          <div class="settings-section-desc">Manage authenticated identity, role privileges, and team ownership</div>
+
+          <div class="profile-hero">
+            <div class="profile-avatar-large" id="profile-avatar">RR</div>
+            <div>
+              <div style="font-size:18px;font-weight:700;color:#fff;" id="profile-hero-name">D. Ruthwik Reddy</div>
+              <div style="font-size:13px;color:var(--text-tertiary);" id="profile-hero-role">Principal SRE &amp; AI Systems Architect</div>
+              <div style="margin-top:8px;display:flex;gap:8px;">
+                <span class="badge badge-success"><span class="badge-dot"></span>Enterprise Administrator</span>
+                <span class="tag">Verified Session</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-field">
+            <label>Full Operator Name</label>
+            <input type="text" id="usr-name" value="D. Ruthwik Reddy">
+          </div>
+          <div class="settings-field">
+            <label>Primary Work Email</label>
+            <input type="email" id="usr-email" value="ruthwikreddy07@gmail.com">
+          </div>
+          <div class="settings-field">
+            <label>Organizational Role / Title</label>
+            <input type="text" id="usr-role" value="Principal SRE & AI Systems Architect">
+          </div>
+          <div class="settings-field">
+            <label>Organization / Team</label>
+            <input type="text" id="usr-org" value="OmniDev Autonomous Systems">
+          </div>
+        </div>
+
+        <!-- 2. GIT CREDENTIALS TAB -->
+        <div class="settings-section" id="sec-credentials">
+          <div class="settings-section-title">Target Git Repository &amp; Personal Access Tokens</div>
+          <div class="settings-section-desc">Configure the live GitHub repository where autonomous branches and pull requests are pushed</div>
+
+          <div class="settings-field">
+            <label>Connected GitHub Repository (owner/repo)</label>
+            <div class="input-wrap">
+              <input type="text" id="cfg-github-repo" value="ruthwikreddy07/wpmmain" style="font-family:var(--font-mono);font-weight:600;">
+              <button class="btn btn-ghost btn-sm" onclick="testConnection('github')">Test Connection</button>
+            </div>
+            <div class="hint">
+              Target for auto-branching and pull requests:
+              <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" style="color:var(--accent);" id="repo-link-hint">https://github.com/ruthwikreddy07/wpmmain ↗</a>
+            </div>
+            <div id="github-test-result" class="connection-banner" style="display:none;"></div>
+          </div>
+
+          <div class="settings-field">
+            <label>Default Working Branch</label>
+            <input type="text" id="cfg-branch" value="main" style="font-family:var(--font-mono);">
+            <div class="hint">The base branch to branch from when opening fix PRs</div>
+          </div>
+
+          <div class="settings-field">
+            <label>GitHub Personal Access Token (PAT)</label>
+            <div class="input-wrap">
+              <input type="password" id="cfg-gh-token" placeholder="ghp_••••••••••••••••••••••••••••••••••••">
+              <button class="btn btn-ghost btn-sm" onclick="toggleVisibility('cfg-gh-token')">Show / Hide</button>
+            </div>
+            <div class="hint">Requires 'repo' scope to create branches and deploy pull requests</div>
+          </div>
+
+          <div class="settings-field" style="margin-top:28px;">
+            <label>Groq Cloud Inference API Key</label>
+            <div class="input-wrap">
+              <input type="password" id="cfg-groq-key" placeholder="gsk_••••••••••••••••••••••••••••••••••••">
+              <button class="btn btn-ghost btn-sm" onclick="toggleVisibility('cfg-groq-key')">Show / Hide</button>
+              <button class="btn btn-ghost btn-sm" onclick="testConnection('llm')">Test Inference</button>
+            </div>
+            <div class="hint">Powers the autonomous ReAct reasoning agent loop (model: openai/gpt-oss-20b)</div>
+            <div id="llm-test-result" class="connection-banner" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- 3. INGRESS & WEBHOOKS TAB -->
+        <div class="settings-section" id="sec-ingress">
+          <div class="settings-section-title">Ingress Gateway &amp; Event Webhooks</div>
+          <div class="settings-section-desc">Public tunnel callback URLs and orchestrator endpoints</div>
+
+          <div class="settings-field">
+            <label>Cloud Backend Target (Render URL for Vercel Split-Deployment)</label>
+            <div class="input-wrap">
+              <input type="text" id="cfg-backend-url" placeholder="e.g. https://omnidev-backend.onrender.com" style="font-family:var(--font-mono);">
+              <button class="btn btn-ghost btn-sm" onclick="saveBackendUrl()">Connect Backend</button>
+            </div>
+            <div class="hint">When hosting frontend on Vercel, direct browser API and WebSocket requests to your Render backend</div>
+          </div>
+
+          <div class="settings-field">
+            <label>Public Localtunnel Ingress Gateway</label>
+            <input type="text" id="cfg-tunnel" value="https://fuzzy-keys-show.loca.lt" readonly style="font-family:var(--font-mono);">
+            <div class="hint">Forwards public GitHub webhook callbacks to localhost:4000</div>
+          </div>
+
+          <div class="settings-field">
+            <label>n8n Cloud Webhook Endpoint</label>
+            <div class="input-wrap">
+              <input type="text" id="cfg-n8n" value="https://n8n-mr7m.onrender.com/webhook/omnidev-github-incident" style="font-family:var(--font-mono);">
+              <button class="btn btn-ghost btn-sm" onclick="testConnection('webhook')">Ping Endpoint</button>
+            </div>
+            <div class="hint">Receives GitHub issue events and forwards them to OmniDev</div>
+            <div id="webhook-test-result" class="connection-banner" style="display:none;"></div>
+          </div>
+
+          <div class="settings-field">
+            <label>Local Server Port</label>
+            <input type="number" id="cfg-port" value="4000" readonly>
+          </div>
+        </div>
+
+        <!-- 4. AUTONOMOUS SAFETY POLICY TAB -->
+        <div class="settings-section" id="sec-agent">
+          <div class="settings-section-title">Autonomous Execution &amp; Safety Governance</div>
+          <div class="settings-section-desc">Control autonomous iteration limits, test sandboxing, and approval gates</div>
+
+          <div class="settings-field">
+            <label>Reasoning LLM Model</label>
+            <select id="cfg-model">
+              <option selected>openai/gpt-oss-20b (Groq Cloud)</option>
+              <option>llama-3.3-70b-versatile (Groq Cloud)</option>
+              <option>mixtral-8x7b-32768 (Groq Cloud)</option>
+            </select>
+          </div>
+
+          <div class="settings-field">
+            <label>Max ReAct Iterations Per Incident</label>
+            <input type="number" id="cfg-max-retries" value="8">
+            <div class="hint">Prevents infinite loop runaway costs</div>
+          </div>
+
+          <div class="settings-field">
+            <label>Isolated Sandbox Test Timeout (seconds)</label>
+            <input type="number" id="cfg-timeout" value="30">
+          </div>
+
+          <div style="margin-top:24px;">
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Require Human Approval Before GitHub PR Push</div>
+                <div class="toggle-desc">Gate autonomous pull request creation until operator approves in Nerve Center</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="cfg-gate" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Auto-Rollback on Test Regression</div>
+                <div class="toggle-desc">Automatically reverts code patches if test suite execution fails</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="cfg-rollback" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Real-Time WebSocket Trace Streaming</div>
+                <div class="toggle-desc">Broadcasts every thought, tool call, and sandboxed test output live</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="cfg-verbose" checked><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. DANGER ZONE TAB -->
+        <div class="settings-section" id="sec-danger">
+          <div class="settings-section-title" style="color:var(--danger);">Danger Zone &amp; Data Governance</div>
+          <div class="settings-section-desc">Critical operations affecting incident logs and platform state</div>
+
+          <div style="background:var(--danger-soft);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-md);padding:24px;">
+            <h4 style="color:var(--danger);font-size:15px;margin-bottom:8px;">Reset Pipeline Database State</h4>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+              Purging database clears historical audit logs. Active pull requests on GitHub will remain intact.
+            </p>
+            <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="alert('Audit logs are protected and immutable in active production mode.')">
+              Purge Database Logs
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom Save Action Bar -->
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:16px;">
+          <button class="btn btn-primary" id="save-btn" onclick="saveAllSettings()">
+            Save Configuration &amp; Profile
+          </button>
+          <span id="save-feedback" style="font-size:13.5px;color:var(--success);display:none;font-weight:600;">
+            ✓ All settings and credentials updated successfully
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast-msg">Settings saved!</div>
+
+<script src="/static/api-config.js"></script>
+<script src="/static/aurora-canvas.js"></script>
+<script>
+function showToast(text) {
+  const t = document.getElementById('toast');
+  t.textContent = text;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2800);
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
+
+  const sec = document.getElementById('sec-' + tabId);
+  if (sec) sec.classList.add('active');
+
+  const nav = Array.from(document.querySelectorAll('.settings-nav-item')).find(a => a.getAttribute('href') === '#' + tabId);
+  if (nav) nav.classList.add('active');
+}
+
+function toggleVisibility(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function saveBackendUrl() {
+  const val = document.getElementById('cfg-backend-url').value;
+  if (window.setApiBase) window.setApiBase(val);
+  showToast('✓ Cloud backend target saved: ' + (val || 'Localhost (relative)'));
+}
+
+async function loadSettings() {
+  try {
+    const savedBackend = localStorage.getItem('omnidev_backend_url') || '';
+    const backendInput = document.getElementById('cfg-backend-url');
+    if (backendInput) backendInput.value = savedBackend;
+    const res = await fetch('/api/settings');
+    const data = await res.json();
+
+    if (data.user_profile) {
+      document.getElementById('usr-name').value = data.user_profile.name || '';
+      document.getElementById('usr-email').value = data.user_profile.email || '';
+      document.getElementById('usr-role').value = data.user_profile.role || '';
+      document.getElementById('usr-org').value = data.user_profile.org || '';
+      document.getElementById('profile-hero-name').textContent = data.user_profile.name;
+      document.getElementById('profile-hero-role').textContent = data.user_profile.role;
+      document.getElementById('profile-avatar').textContent = data.user_profile.avatar_initials || 'RR';
+    }
+
+    if (data.github_repo) {
+      document.getElementById('cfg-github-repo').value = data.github_repo;
+      document.getElementById('top-repo-text').textContent = data.github_repo;
+      document.getElementById('repo-link-hint').textContent = data.repo_url + ' ↗';
+      document.getElementById('repo-link-hint').href = data.repo_url;
+      document.getElementById('global-repo-pill').href = data.repo_url;
+    }
+
+    if (data.default_branch) {
+      document.getElementById('cfg-branch').value = data.default_branch;
+    }
+    if (data.github_token_masked) {
+      document.getElementById('cfg-gh-token').value = data.github_token_masked;
+    }
+    if (data.groq_key_masked) {
+      document.getElementById('cfg-groq-key').value = data.groq_key_masked;
+    }
+    if (data.n8n_webhook_url) {
+      document.getElementById('cfg-n8n').value = data.n8n_webhook_url;
+    }
+    if (data.localtunnel_url) {
+      document.getElementById('cfg-tunnel').value = data.localtunnel_url;
+    }
+  } catch(e) {}
+}
+
+async function testConnection(target) {
+  const resultBox = document.getElementById(target + '-test-result');
+  resultBox.style.display = 'flex';
+  resultBox.innerHTML = '<span class="spinner" style="margin-right:8px;"></span> Testing connection...';
+
+  try {
+    const res = await fetch('/api/system/test-connection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: target })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      resultBox.innerHTML = `<span style="color:var(--success);font-weight:600;"><span class="connection-status-dot" style="background:var(--success);"></span>${data.message}</span>`;
+    } else {
+      resultBox.innerHTML = `<span style="color:var(--danger);font-weight:600;"><span class="connection-status-dot" style="background:var(--danger);"></span>${data.message}</span>`;
+    }
+  } catch(e) {
+    resultBox.innerHTML = `<span style="color:var(--danger);font-weight:600;">✕ Connection check failed: ${e.message}</span>`;
+  }
+}
+
+async function saveAllSettings() {
+  const btn = document.getElementById('save-btn');
+  const fb = document.getElementById('save-feedback');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  const payload = {
+    user_name: document.getElementById('usr-name').value,
+    user_email: document.getElementById('usr-email').value,
+    user_role: document.getElementById('usr-role').value,
+    user_org: document.getElementById('usr-org').value,
+    github_repo: document.getElementById('cfg-github-repo').value,
+    default_branch: document.getElementById('cfg-branch').value,
+    github_token: document.getElementById('cfg-gh-token').value,
+    groq_api_key: document.getElementById('cfg-groq-key').value,
+    n8n_webhook_url: document.getElementById('cfg-n8n').value
+  };
+
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    fb.style.display = 'inline';
+    showToast('✓ Settings and profile saved successfully');
+    setTimeout(() => { fb.style.display = 'none'; }, 3500);
+
+    // Update UI elements immediately
+    document.getElementById('profile-hero-name').textContent = payload.user_name;
+    document.getElementById('profile-hero-role').textContent = payload.user_role;
+    document.getElementById('top-repo-text').textContent = payload.github_repo;
+  } catch(e) {
+    alert('Save error: ' + e);
+  } finally {
+    btn.textContent = 'Save Configuration & Profile';
+    btn.disabled = false;
+  }
+}
+
+if (window.location.hash) {
+  const tab = window.location.hash.substring(1);
+  if (['profile', 'credentials', 'ingress', 'agent', 'danger'].includes(tab)) {
+    switchTab(tab);
+  }
+}
+
+loadSettings();
+</script>
+</body>
+</html>

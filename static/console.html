@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniDev — Nerve Center</title>
+<link rel="stylesheet" href="/static/aurora.css">
+<style>
+.console-grid {
+  display: grid; grid-template-columns: 1fr 420px; gap: 20px;
+}
+.jobs-panel { display: flex; flex-direction: column; gap: 16px; }
+.job-card {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 20px;
+  transition: all var(--transition-base); cursor: pointer;
+  position: relative;
+}
+.job-card:hover { border-color: var(--border-mid); transform: translateY(-1px); }
+.job-card.active { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-soft); }
+.job-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.job-id { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); }
+.job-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5; }
+.job-meta { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--text-tertiary); flex-wrap: wrap; }
+.job-meta svg { width: 14px; height: 14px; flex-shrink: 0; }
+.job-pr-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 4px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 11px; font-weight: 600; text-decoration: none;
+}
+.job-pr-badge:hover { text-decoration: underline; }
+
+.detail-panel {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); overflow: hidden;
+  position: sticky; top: 92px; max-height: calc(100vh - 120px);
+  display: flex; flex-direction: column;
+}
+.detail-header {
+  padding: 20px; border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-0); flex-shrink: 0;
+}
+.detail-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; line-height: 1.4; }
+.detail-id { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); }
+.detail-body { padding: 20px; overflow-y: auto; flex: 1; }
+.detail-section { margin-bottom: 20px; }
+.detail-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 8px;
+}
+
+.pr-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-radius: var(--radius-sm);
+  background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.25);
+  margin-bottom: 16px;
+}
+.pr-banner-left { display: flex; align-items: center; gap: 10px; }
+.pr-banner-left svg { width: 20px; height: 20px; color: var(--accent-2); }
+.pr-banner-title { font-size: 13px; font-weight: 600; color: #fff; }
+.pr-banner-desc { font-size: 11.5px; color: var(--accent-2); font-family: var(--font-mono); }
+.pr-banner a.btn { padding: 6px 12px; font-size: 12px; }
+
+.log-stream {
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  font-family: var(--font-mono); font-size: 12px;
+  line-height: 1.75; color: var(--text-secondary);
+  max-height: 260px; overflow-y: auto;
+}
+.log-line { display: flex; gap: 8px; word-break: break-word; }
+.log-tag { font-weight: 600; color: var(--accent); min-width: 65px; flex-shrink: 0; }
+.log-time { color: var(--text-tertiary); min-width: 65px; user-select: none; }
+.log-msg-info { color: var(--accent-3); }
+.log-msg-success { color: var(--success); }
+.log-msg-warn { color: var(--warning); }
+.log-msg-error { color: var(--danger); }
+.log-msg-thought { color: #a78bfa; font-style: italic; }
+
+.diff-view {
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); overflow: hidden;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.65;
+}
+.diff-header {
+  padding: 10px 14px; background: var(--surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11.5px; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.diff-body { padding: 12px 14px; max-height: 240px; overflow-y: auto; }
+.diff-add { color: #34d399; background: rgba(52,211,153,0.08); padding: 1px 4px; border-radius: 2px; }
+.diff-add::before { content: '+ '; }
+.diff-rem { color: #f87171; background: rgba(248,113,113,0.08); padding: 1px 4px; border-radius: 2px; }
+.diff-rem::before { content: '- '; }
+.diff-ctx { color: var(--text-tertiary); padding: 1px 4px; }
+.diff-ctx::before { content: '  '; }
+
+.approval-dock {
+  display: flex; gap: 10px; margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+.approval-dock .btn-approve {
+  flex: 1; padding: 11px; border: none; border-radius: var(--radius-sm);
+  background: var(--success); color: #fff; font-weight: 700;
+  font-family: var(--font-sans); font-size: 13px; cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.approval-dock .btn-approve:hover { background: #16a34a; transform: translateY(-1px); }
+.approval-dock .btn-reject {
+  flex: 1; padding: 11px; border: 1px solid var(--danger);
+  border-radius: var(--radius-sm); background: transparent;
+  color: var(--danger); font-weight: 700; font-family: var(--font-sans);
+  font-size: 13px; cursor: pointer; transition: all var(--transition-fast);
+}
+.approval-dock .btn-reject:hover { background: var(--danger-soft); }
+
+.create-job-form {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 20px;
+}
+.create-job-form textarea {
+  width: 100%; min-height: 90px; padding: 12px 14px;
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-family: var(--font-sans); font-size: 14px;
+  resize: vertical; outline: none; transition: border var(--transition-fast);
+}
+.create-job-form textarea:focus { border-color: var(--accent); }
+.create-job-form textarea::placeholder { color: var(--text-tertiary); }
+
+.status-bar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 20px; background: var(--surface-1);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  margin-bottom: 20px; font-size: 13px; flex-wrap: wrap;
+}
+.status-indicator {
+  width: 8px; height: 8px; border-radius: 50%;
+  animation: pulse-dot 2s ease infinite;
+}
+.status-indicator.online { background: var(--success); }
+.status-indicator.offline { background: var(--danger); }
+
+.repo-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border-subtle);
+  color: var(--text-primary); font-size: 12px; font-weight: 500;
+  text-decoration: none; transition: all var(--transition-fast);
+}
+.repo-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 1024px) {
+  .console-grid { grid-template-columns: 1fr; }
+  .detail-panel { position: static; max-height: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="aurora-bg"></canvas>
+<div class="aurora-mesh"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+
+<div class="page-wrapper">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><div class="brand-icon">O</div><span class="brand-name">OmniDev</span></a>
+    <div class="topbar-nav">
+      <a href="/">Overview</a>
+      <a href="/console" class="active">Nerve Center</a>
+      <a href="/workspace">Codebase</a>
+      <a href="/analytics">Telemetry</a>
+      <a href="/integrations">Integrations</a>
+      <a href="/rules">Playbook</a>
+      <a href="/docs">Architecture</a>
+    </div>
+    <div class="topbar-actions">
+      <a id="nav-repo-link" href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="repo-pill" title="Connected GitHub Target">
+        <span class="badge-dot"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        <span id="nav-repo-name">ruthwikreddy07/wpmmain</span>
+      </a>
+      <a href="/settings" class="btn-icon" title="Platform Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      <div class="user-profile-menu">
+        <button class="user-avatar-btn" onclick="toggleUserDropdown(event)">
+          <div class="user-avatar-circle">RR</div>
+          <span style="font-size:12.5px;font-weight:600;">Ruthwik</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="user-dropdown-panel" class="dropdown-panel" style="display:none;">
+          <div style="padding:6px 8px 10px;border-bottom:1px solid var(--border-subtle);margin-bottom:8px;">
+            <div style="font-size:13.5px;font-weight:700;">D. Ruthwik Reddy</div>
+            <div style="font-size:11.5px;color:var(--text-tertiary);">ruthwikreddy07 • Admin</div>
+            <div style="margin-top:6px;"><span class="badge badge-success"><span class="badge-dot"></span>Connected to wpmmain</span></div>
+          </div>
+          <a href="/settings#profile" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Account Profile</a>
+          <a href="/settings#credentials" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Repository &amp; Keys</a>
+          <a href="https://github.com/ruthwikreddy07/wpmmain" target="_blank" class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg> Open GitHub Repo ↗</a>
+          <div style="border-top:1px solid var(--border-subtle);margin-top:8px;padding-top:8px;">
+            <a href="/auth" class="dropdown-item danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign Out</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="content-offset container-lg">
+    <div class="page-header animate-in">
+      <div>
+        <h1 class="page-title">Nerve Center</h1>
+        <p class="page-description">Live incident orchestration, reasoning execution, and approval dock</p>
+      </div>
+      <button class="btn btn-primary" onclick="toggleCreateForm()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Dispatch Agent
+      </button>
+    </div>
+
+    <div id="create-form" style="display:none;margin-bottom:20px;" class="animate-in">
+      <div class="create-job-form">
+        <div style="margin-bottom:12px;font-weight:600;font-size:14px;">Trigger Autonomous Bug Fix</div>
+        <textarea id="job-task" placeholder="e.g. Fix ZeroDivisionError in calculate_discount when discount_percent is 0"></textarea>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center;">
+          <input id="job-dir" class="input" value="." placeholder="Project directory" style="max-width:200px;">
+          <button class="btn btn-primary" onclick="createJob()">Launch ReAct Loop</button>
+          <button class="btn btn-ghost" onclick="toggleCreateForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar animate-in animate-in-1">
+      <div class="status-indicator" id="ws-status"></div>
+      <span id="ws-label">Agent Engine: Standby</span>
+      <div style="flex:1;"></div>
+      <span id="connected-repo-tag" class="tag" style="background:var(--surface-3);">Repo: ruthwikreddy07/wpmmain</span>
+      <span class="mono" style="font-size:12px;color:var(--text-tertiary);" id="job-count">0 jobs</span>
+    </div>
+
+    <div class="console-grid">
+      <div class="jobs-panel" id="jobs-list">
+        <div class="empty-state" id="empty-jobs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <div class="empty-title">Loading pipeline jobs...</div>
+          <div class="empty-desc">Fetching live execution records from SQLite</div>
+        </div>
+      </div>
+
+      <div class="detail-panel" id="detail-panel" style="display:none;">
+        <div class="detail-header">
+          <div class="detail-title" id="detail-title">Job Details</div>
+          <div class="detail-id" id="detail-id"></div>
+        </div>
+        <div class="detail-body">
+          <div id="pr-banner-container" style="display:none;"></div>
+
+          <div class="detail-section">
+            <div class="detail-label">Status</div>
+            <div id="detail-status"></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-label">Task Specification</div>
+            <div id="detail-task" style="font-size:13.5px;color:var(--text-secondary);background:var(--surface-0);padding:10px 14px;border-radius:6px;border:1px solid var(--border-subtle);white-space:pre-wrap;"></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-label">Live Agent Step Trace</div>
+            <div class="log-stream" id="log-stream"></div>
+          </div>
+          <div class="detail-section" id="diff-section" style="display:none;">
+            <div class="detail-label">Generated Surgical Patch</div>
+            <div class="diff-view" id="diff-view">
+              <div class="diff-header">
+                <span id="diff-header-text">Code Patch</span>
+                <span class="tag" style="font-size:10.5px;">git diff</span>
+              </div>
+              <div class="diff-body" id="diff-body"></div>
+            </div>
+          </div>
+          <div class="approval-dock" id="approval-dock" style="display:none;">
+            <button class="btn-approve" onclick="approveJob()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Approve &amp; Open GitHub PR
+            </button>
+            <button class="btn-reject" onclick="rejectJob()">✕ Reject</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/api-config.js"></script>
+<script src="/static/aurora-canvas.js"></script>
+<script>
+let currentJobId = null, ws = null;
+
+const statusBadgeMap = {
+  queued: { cls: 'badge-info', label: 'Queued' },
+  running: { cls: 'badge-warning', label: 'Executing ReAct Loop' },
+  awaiting_approval: { cls: 'badge-warning', label: 'Awaiting Human Approval' },
+  pending_approval: { cls: 'badge-warning', label: 'Awaiting Human Approval' },
+  pr_created: { cls: 'badge-success', label: 'PR Created & Merged' },
+  completed: { cls: 'badge-success', label: 'Fix Verified' },
+  approved_local_only: { cls: 'badge-info', label: 'Approved Locally' },
+  failed: { cls: 'badge-danger', label: 'Failed' },
+  max_iterations_reached: { cls: 'badge-danger', label: 'Max Iterations' },
+  rejected: { cls: 'badge-neutral', label: 'Rejected by Operator' }
+};
+
+async function loadSystemInfo() {
+  try {
+    const res = await fetch('/api/system/info');
+    const info = await res.json();
+    if (info.repo) {
+      document.getElementById('nav-repo-name').textContent = info.repo;
+      document.getElementById('nav-repo-link').href = info.repo_url;
+      document.getElementById('connected-repo-tag').textContent = 'Repo: ' + info.repo;
+    }
+  } catch(e) {}
+}
+
+function toggleCreateForm() {
+  const form = document.getElementById('create-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('job-task').focus();
+  }
+}
+
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    const data = await res.json();
+    const jobs = data.jobs || [];
+    const list = document.getElementById('jobs-list');
+    const empty = document.getElementById('empty-jobs');
+    document.getElementById('job-count').textContent = jobs.length + ' incident' + (jobs.length !== 1 ? 's' : '');
+    if (jobs.length === 0) {
+      empty.style.display = 'flex';
+      empty.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <div class="empty-title">No jobs recorded yet</div>
+        <div class="empty-desc">Click "Dispatch Agent" above to launch a self-healing task</div>
+      `;
+      return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = '';
+    jobs.forEach(job => {
+      const jid = job.id || job.job_id;
+      const card = document.createElement('div');
+      card.className = 'job-card' + (jid === currentJobId ? ' active' : '');
+      card.onclick = () => selectJob(jid);
+      const st = statusBadgeMap[job.status] || { cls: 'badge-neutral', label: job.status };
+      const prHtml = job.pr_url ? `<a href="${escAttr(job.pr_url)}" target="_blank" class="job-pr-badge" onclick="event.stopPropagation();">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        GitHub PR ↗
+      </a>` : '';
+      card.innerHTML = `
+        <div class="job-header">
+          <span class="job-id">#${escHtml(jid.substring(0, 8))}</span>
+          <span class="badge ${st.cls}"><span class="badge-dot"></span>${st.label}</span>
+        </div>
+        <div class="job-title">${escHtml(job.task || 'Autonomous Job')}</div>
+        <div class="job-meta">
+          <span>${formatTime(job.created_at)}</span>
+          ${prHtml}
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+    if (!currentJobId && jobs.length > 0) {
+      selectJob(jobs[0].id || jobs[0].job_id);
+    }
+  } catch(e) {}
+}
+
+async function selectJob(jobId) {
+  currentJobId = jobId;
+  document.querySelectorAll('.job-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('detail-panel').style.display = 'flex';
+  try {
+    const res = await fetch('/api/jobs/' + jobId);
+    const job = await res.json();
+    const jid = job.id || job.job_id;
+    document.getElementById('detail-title').textContent = (job.task || 'Task').substring(0, 80);
+    document.getElementById('detail-id').textContent = 'Incident ID: ' + jid;
+    const st = statusBadgeMap[job.status] || { cls: 'badge-neutral', label: job.status };
+    document.getElementById('detail-status').innerHTML = '<span class="badge ' + st.cls + '"><span class="badge-dot"></span>' + st.label + '</span>';
+    document.getElementById('detail-task').textContent = job.task;
+
+    const prBanner = document.getElementById('pr-banner-container');
+    if (job.pr_url) {
+      prBanner.style.display = 'block';
+      prBanner.innerHTML = `
+        <div class="pr-banner">
+          <div class="pr-banner-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <div>
+              <div class="pr-banner-title">Pull Request Deployed to GitHub</div>
+              <div class="pr-banner-desc">${escHtml(job.pr_url)}</div>
+            </div>
+          </div>
+          <a href="${escAttr(job.pr_url)}" target="_blank" class="btn btn-primary btn-sm">Open on GitHub ↗</a>
+        </div>
+      `;
+    } else {
+      prBanner.style.display = 'none';
+    }
+
+    const needsApproval = job.status === 'awaiting_approval' || job.status === 'pending_approval';
+    document.getElementById('approval-dock').style.display = needsApproval ? 'flex' : 'none';
+
+    const logs = job.logs || [];
+    if (logs.length > 0) {
+      document.getElementById('log-stream').innerHTML = logs.map(l => {
+        let tag = 'INFO';
+        let text = '';
+        if (typeof l === 'string') {
+          text = l;
+        } else {
+          tag = (l.event || 'step').toUpperCase();
+          text = l.data || '';
+        }
+        let cls = 'log-msg-info';
+        if (text.includes('ERROR') || tag === 'ERROR') cls = 'log-msg-error';
+        else if (text.includes('✓') || text.includes('PASS') || tag === 'PR_CREATED') cls = 'log-msg-success';
+        else if (tag === 'THOUGHT') cls = 'log-msg-thought';
+        else if (tag === 'TOOL_CALL') cls = 'log-msg-warn';
+        return `<div class="log-line"><span class="log-tag">[${escHtml(tag)}]</span><span class="${cls}">${escHtml(text)}</span></div>`;
+      }).join('');
+    } else {
+      document.getElementById('log-stream').innerHTML = '<span style="color:var(--text-tertiary);">No step logs recorded</span>';
+    }
+
+    const patchText = job.patch || (job.diffs && job.diffs.length ? job.diffs.map(d=>d.diff).join('\n') : '');
+    if (patchText && patchText.trim()) {
+      document.getElementById('diff-section').style.display = 'block';
+      document.getElementById('diff-body').innerHTML = patchText.split('\n').map(l => {
+        if (l.startsWith('+')) return '<div class="diff-add">' + escHtml(l.substring(1)) + '</div>';
+        if (l.startsWith('-')) return '<div class="diff-rem">' + escHtml(l.substring(1)) + '</div>';
+        return '<div class="diff-ctx">' + escHtml(l) + '</div>';
+      }).join('');
+    } else {
+      document.getElementById('diff-section').style.display = 'none';
+    }
+
+    connectWS(jid);
+  } catch(e) {}
+}
+
+function connectWS(jobId) {
+  if (ws) ws.close();
+  const wsUrl = window.getOmniDevWsUrl ? window.getOmniDevWsUrl('/ws/' + jobId) : ((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws/' + jobId);
+  ws = new WebSocket(wsUrl);
+  ws.onopen = () => {
+    document.getElementById('ws-status').className = 'status-indicator online';
+    document.getElementById('ws-label').textContent = 'WebSocket Online — streaming incident #' + jobId.substring(0, 8);
+  };
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      const stream = document.getElementById('log-stream');
+      const tag = (msg.event || 'STEP').toUpperCase();
+      const text = msg.data || JSON.stringify(msg);
+      let cls = 'log-msg-info';
+      if (text.includes('ERROR') || tag === 'ERROR') cls = 'log-msg-error';
+      else if (text.includes('✓') || tag === 'PR_CREATED') cls = 'log-msg-success';
+      else if (tag === 'THOUGHT') cls = 'log-msg-thought';
+      stream.innerHTML += `<div class="log-line"><span class="log-tag">[${escHtml(tag)}]</span><span class="${cls}">${escHtml(text)}</span></div>`;
+      stream.scrollTop = stream.scrollHeight;
+      if (tag === 'APPROVAL_REQUEST' || msg.type === 'approval_request') {
+        document.getElementById('approval-dock').style.display = 'flex';
+      }
+    } catch(err) {}
+  };
+  ws.onclose = () => {
+    document.getElementById('ws-status').className = 'status-indicator offline';
+    document.getElementById('ws-label').textContent = 'WebSocket Idle';
+  };
+}
+
+async function createJob() {
+  const task = document.getElementById('job-task').value;
+  const dir = document.getElementById('job-dir').value || '.';
+  if (!task.trim()) return;
+  const btn = event.target;
+  btn.textContent = 'Spawning Agent...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task, project_dir: dir })
+    });
+    const data = await res.json();
+    document.getElementById('job-task').value = '';
+    document.getElementById('create-form').style.display = 'none';
+    await loadJobs();
+    if (data.job_id) {
+      selectJob(data.job_id);
+    }
+  } catch(e) {
+    alert('Failed to launch job: ' + e);
+  } finally {
+    btn.textContent = 'Launch ReAct Loop';
+    btn.disabled = false;
+  }
+}
+
+async function approveJob() {
+  if (!currentJobId) return;
+  const btn = event.target;
+  btn.textContent = 'Pushing Branch & Opening PR...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/jobs/' + currentJobId + '/approve', { method: 'POST' });
+    const data = await res.json();
+    await selectJob(currentJobId);
+    loadJobs();
+  } catch(e) {
+    alert('Approval error: ' + e);
+  } finally {
+    btn.textContent = '✓ Approve & Open GitHub PR';
+    btn.disabled = false;
+  }
+}
+
+async function rejectJob() {
+  if (!currentJobId) return;
+  const reason = prompt('Reason for rejection:', 'Does not meet patch guidelines');
+  if (reason === null) return;
+  await fetch('/api/jobs/' + currentJobId + '/reject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason })
+  });
+  selectJob(currentJobId);
+  loadJobs();
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function escAttr(s) { return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+function formatTime(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  } catch(e) { return iso; }
+}
+
+loadSystemInfo();
+loadJobs();
+setInterval(loadJobs, 6000);
+</script>
+</body>
+</html>
