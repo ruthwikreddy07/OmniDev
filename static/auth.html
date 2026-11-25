@@ -248,7 +248,8 @@ function handleAuth(mode) {
       avatar: initials
     });
   }
-  window.location.href = '/console';
+  const hasRepo = window.getOmniDevRepo && window.getOmniDevRepo();
+  window.location.href = hasRepo ? '/console' : '/console?setup=1';
 }
 </script>
 </body>

@@ -295,13 +295,22 @@
             ">
           </div>
 
-          <div style="margin-bottom:16px;">
+          <div style="margin-bottom:14px;">
             <label style="display:block;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">GitHub Personal Access Token (Optional)</label>
             <input type="password" id="modal-token-input" placeholder="ghp_••••••••••••••••••••••••••••••••••••" style="
               width:100%;box-sizing:border-box;background:#131b2e;border:1px solid #1e293b;border-radius:8px;
               color:#fff;padding:10px 14px;font-size:14px;font-family:monospace;outline:none;
             ">
-            <div style="font-size:11.5px;color:#64748b;margin-top:4px;">Needed only for private repositories or automatic branch creation/PR deployment.</div>
+            <div style="font-size:11.5px;color:#64748b;margin-top:4px;">Stored only in your browser. Needed for private repos or automatic PR creation.</div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Groq API Key (For Live AI Agent)</label>
+            <input type="password" id="modal-groq-input" placeholder="gsk_••••••••••••••••••••••••••••••••••••" style="
+              width:100%;box-sizing:border-box;background:#131b2e;border:1px solid #1e293b;border-radius:8px;
+              color:#fff;padding:10px 14px;font-size:14px;font-family:monospace;outline:none;
+            ">
+            <div style="font-size:11.5px;color:#64748b;margin-top:4px;">Stored only in your browser (never saved on server DB). Optional if server provides a demo fallback.</div>
           </div>
 
           <div style="margin-bottom:20px;">
@@ -326,16 +335,21 @@
     }
     document.getElementById('modal-repo-input').value = window.getOmniDevRepo();
     document.getElementById('modal-token-input').value = window.getOmniDevToken();
+    const groqInput = document.getElementById('modal-groq-input');
+    if (groqInput) groqInput.value = window.getOmniDevGroqKey();
     modal.style.display = 'flex';
   };
 
   window.saveConnectedRepo = function() {
     const repoInput = document.getElementById('modal-repo-input');
     const tokenInput = document.getElementById('modal-token-input');
+    const groqInput = document.getElementById('modal-groq-input');
     const repo = repoInput ? repoInput.value.trim() : '';
     const token = tokenInput ? tokenInput.value.trim() : '';
+    const groq = groqInput ? groqInput.value.trim() : '';
     window.setOmniDevRepo(repo);
-    if (token) window.setOmniDevToken(token);
+    window.setOmniDevToken(token);
+    if (groqInput) window.setOmniDevGroqKey(groq);
     document.getElementById('omnidev-repo-modal').style.display = 'none';
     if (window.location.pathname.includes('workspace') || window.location.pathname.includes('console')) {
       window.location.reload();
@@ -376,9 +390,15 @@
   });
 
   // Run on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', window.syncOmniDevNav);
-  } else {
+  const _onReady = () => {
     window.syncOmniDevNav();
+    if (new URLSearchParams(window.location.search).get('setup') === '1' && !window.getOmniDevRepo()) {
+      window.openRepoModal();
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _onReady);
+  } else {
+    _onReady();
   }
 })();
