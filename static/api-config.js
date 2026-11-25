@@ -4,6 +4,8 @@
  */
 (() => {
   // 1. Backend URL resolution for split deployment (Vercel Frontend + Render Backend)
+  const DEFAULT_RENDER_BACKEND = 'https://omnidev-backend-yuf2.onrender.com';
+
   window.getApiBase = function() {
     const custom = localStorage.getItem('omnidev_backend_url');
     if (custom && custom.trim()) {
@@ -12,7 +14,10 @@
     if (window.OMNIDEV_BACKEND_URL && window.OMNIDEV_BACKEND_URL.trim()) {
       return window.OMNIDEV_BACKEND_URL.trim().replace(/\/+$/, '');
     }
-    return '';
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      return '';
+    }
+    return DEFAULT_RENDER_BACKEND;
   };
 
   window.setApiBase = function(url) {

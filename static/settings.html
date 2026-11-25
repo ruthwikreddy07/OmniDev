@@ -404,7 +404,7 @@ function saveBackendUrl() {
 
 async function loadSettings() {
   try {
-    const savedBackend = localStorage.getItem('omnidev_backend_url') || '';
+    const savedBackend = localStorage.getItem('omnidev_backend_url') || (window.getApiBase ? window.getApiBase() : '');
     const backendInput = document.getElementById('cfg-backend-url');
     if (backendInput) backendInput.value = savedBackend;
 
