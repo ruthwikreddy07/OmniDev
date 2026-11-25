@@ -5,7 +5,7 @@
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20SQLite-336791)](#)
 [![Deployment](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Render-black)](#)
 
-> **OmniDev** is a multi-tenant autonomous software engineering platform (**Architecture B**). Each operator connects their own GitHub repository, optional GitHub PAT, and Groq API key in their browser session—allowing OmniDev to shallow-clone the target repo into an isolated sandbox, reproduce bugs, compute minimal surgical diffs, and open verified Pull Requests on GitHub with Human-in-the-Loop approval.
+> **OmniDev** is a multi-tenant autonomous software engineering platform. Each operator connects their own GitHub repository, optional GitHub PAT, and Groq API key in their browser session—allowing OmniDev to shallow-clone the target repo into an isolated sandbox, reproduce bugs, compute minimal surgical diffs, and open verified Pull Requests on GitHub with Human-in-the-Loop approval.
 
 ---
 
