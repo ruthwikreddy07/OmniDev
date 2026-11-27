@@ -6,10 +6,10 @@ from src.agent.llm_provider import LLMProvider
 
 
 class AgentExecutor:
-    def __init__(self, llm_provider: LLMProvider, project_dir: str = ".", max_iterations: int = 8):
+    def __init__(self, llm_provider: LLMProvider, project_dir: str = ".", max_iterations: int = 15):
         self.llm = llm_provider
         self.project_dir = Path(project_dir).resolve()
-        self.max_iterations = max_iterations
+        self.max_iterations = max(1, min(int(max_iterations), 30))
         self.system_instruction = (
             "You are OmniDev, an autonomous software engineer. "
             "Investigate bugs, search files, read code, apply patches, and run tests. "

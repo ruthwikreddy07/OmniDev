@@ -64,6 +64,7 @@ class CreateJobRequest(BaseModel):
     api_key: str = ""
     github_repo: Optional[str] = ""
     github_token: Optional[str] = ""
+    max_iterations: Optional[int] = 15
 
 
 class RejectJobRequest(BaseModel):
@@ -106,7 +107,8 @@ async def create_job(req: CreateJobRequest, request: Request):
         project_dir=".",
         api_key=target_groq_key,
         github_repo=target_repo,
-        github_token=target_token
+        github_token=target_token,
+        max_iterations=req.max_iterations if req.max_iterations is not None else 15
     )
     return {"job_id": job_id, "status": "queued"}
 

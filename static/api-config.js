@@ -71,6 +71,18 @@
     }
   };
 
+  window.getOmniDevMaxIterations = function() {
+    const raw = parseInt(localStorage.getItem('omnidev_max_iterations') || '15', 10);
+    if (isNaN(raw)) return 15;
+    return Math.max(1, Math.min(raw, 30));
+  };
+
+  window.setOmniDevMaxIterations = function(val) {
+    const n = parseInt(val, 10);
+    if (isNaN(n)) return;
+    localStorage.setItem('omnidev_max_iterations', String(Math.max(1, Math.min(n, 30))));
+  };
+
   window.getOmniDevProfile = function() {
     try {
       const saved = localStorage.getItem('omnidev_user_profile');

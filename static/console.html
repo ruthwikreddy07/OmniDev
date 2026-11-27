@@ -508,10 +508,11 @@ async function createJob(btnEl) {
   const btn = btnEl || document.querySelector('#create-form .btn-primary');
   if (btn) { btn.textContent = 'Spawning Agent...'; btn.disabled = true; }
   try {
+    const maxIters = window.getOmniDevMaxIterations ? window.getOmniDevMaxIterations() : 15;
     const res = await fetch('/api/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: task.trim(), project_dir: dir })
+      body: JSON.stringify({ task: task.trim(), project_dir: dir, max_iterations: maxIters })
     });
     const data = await res.json();
     if (!res.ok) {

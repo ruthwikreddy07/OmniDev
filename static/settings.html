@@ -304,8 +304,8 @@
 
           <div class="settings-field">
             <label>Max ReAct Iterations Per Incident</label>
-            <input type="number" id="cfg-max-retries" value="8">
-            <div class="hint">Prevents infinite loop runaway costs</div>
+            <input type="number" id="cfg-max-retries" value="15" min="1" max="30">
+            <div class="hint">Allowed range: 1–30. Prevents infinite loop runaway costs</div>
           </div>
 
           <div class="settings-field">
@@ -440,6 +440,11 @@ async function loadSettings() {
       document.getElementById('cfg-groq-key').value = localGroqKey;
     }
 
+    const maxItersEl = document.getElementById('cfg-max-retries');
+    if (maxItersEl && window.getOmniDevMaxIterations) {
+      maxItersEl.value = window.getOmniDevMaxIterations();
+    }
+
     const res = await fetch('/api/settings');
     const data = await res.json();
 
@@ -516,6 +521,11 @@ async function saveAllSettings() {
   if (window.setOmniDevRepo) window.setOmniDevRepo(repoVal);
   if (window.setOmniDevToken && !tokenVal.startsWith('•')) window.setOmniDevToken(tokenVal);
   if (window.setOmniDevGroqKey && !groqVal.startsWith('•') && groqVal !== 'Managed by Server') window.setOmniDevGroqKey(groqVal);
+
+  const maxItersEl = document.getElementById('cfg-max-retries');
+  if (maxItersEl && window.setOmniDevMaxIterations) {
+    window.setOmniDevMaxIterations(maxItersEl.value);
+  }
 
   const payload = {
     user_name: profileObj.name,

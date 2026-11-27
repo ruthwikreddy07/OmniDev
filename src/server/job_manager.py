@@ -23,9 +23,10 @@ def _clean_repo_slug(repo: str) -> str:
 
 
 class JobManager:
-    def create_job(self, task: str, project_dir: str = ".", api_key: str = "", github_repo: str = "", github_token: str = "") -> str:
+    def create_job(self, task: str, project_dir: str = ".", api_key: str = "", github_repo: str = "", github_token: str = "", max_iterations: int = 15) -> str:
         job_id = str(uuid.uuid4())[:8]
         clean_repo = _clean_repo_slug(github_repo)
+        safe_iters = max(1, min(int(max_iterations or 15), 30))
         job_data = {
             "id": job_id,
             "task": task,
@@ -41,10 +42,10 @@ class JobManager:
         }
         save_job(job_data)
         add_log(job_id, "task", task)
-        asyncio.create_task(self._run_job(job_id, task, ".", api_key, clean_repo, github_token.strip() if github_token else ""))
+        asyncio.create_task(self._run_job(job_id, task, ".", api_key, clean_repo, github_token.strip() if github_token else "", safe_iters))
         return job_id
 
-    async def _run_job(self, job_id: str, task: str, project_dir: str, api_key: str, github_repo: str = "", github_token: str = ""):
+    async def _run_job(self, job_id: str, task: str, project_dir: str, api_key: str, github_repo: str = "", github_token: str = "", max_iterations: int = 15):
         job = db_get_job(job_id)
         if not job:
             return
@@ -86,7 +87,7 @@ class JobManager:
                 on_step({"event": "workspace", "data": f"Isolated workspace ready for {github_repo}"})
 
             llm = LLMProvider(api_key=api_key if api_key else None)
-            agent = AgentExecutor(llm, project_dir=effective_dir)
+            agent = AgentExecutor(llm, project_dir=effective_dir, max_iterations=max_iterations)
             result = await asyncio.to_thread(agent.run, task, on_step)
 
             job["status"] = result["status"]
