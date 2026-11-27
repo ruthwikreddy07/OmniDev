@@ -23,7 +23,7 @@
           "string": [
             {
               "value1": "={{ $json.body.action }}",
-              "operation": "contains",
+              "operation": "equal",
               "value2": "opened"
             }
           ]
@@ -41,19 +41,27 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend.onrender.com' }}/api/jobs",
+        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend-yuf2.onrender.com' }}/api/jobs",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-GitHub-Token",
+              "value": "={{ $env.GITHUB_TOKEN || '' }}"
+            },
+            {
+              "name": "X-Groq-Api-Key",
+              "value": "={{ $env.GROQ_API_KEY || '' }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"task\": \"GitHub Issue: \" + ($json.body.issue.title || \"Bug\") + \"\\n\\n\" + ($json.body.issue.body || \"\"),\n  \"project_dir\": \".\"\n}",
+        "jsonBody": "={{ { \"task\": \"GitHub Issue: \" + ($json.body.issue.title || \"Bug\") + \"\\n\\n\" + ($json.body.issue.body || \"\"), \"github_repo\": ($json.body.repository && $json.body.repository.full_name) ? $json.body.repository.full_name : \"\", \"project_dir\": \".\" } }}",
         "options": {}
       },
       "id": "trigger-agent-node",
@@ -67,7 +75,7 @@
     },
     {
       "parameters": {
-        "amount": 10,
+        "amount": 30,
         "unit": "seconds"
       },
       "id": "wait-node",
@@ -82,13 +90,17 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend.onrender.com' }}/api/jobs/{{ $('Trigger OmniDev Agent').item.json.job_id }}",
+        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend-yuf2.onrender.com' }}/api/jobs/{{ $('Trigger OmniDev Agent').item.json.job_id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-Target-Repo",
+              "value": "={{ ($('GitHub Issue Webhook').item.json.body.repository && $('GitHub Issue Webhook').item.json.body.repository.full_name) ? $('GitHub Issue Webhook').item.json.body.repository.full_name : '' }}"
             }
           ]
         },
@@ -109,6 +121,7 @@
           "string": [
             {
               "value1": "={{ $json.status }}",
+              "operation": "equal",
               "value2": "awaiting_approval"
             }
           ]
@@ -125,14 +138,43 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "operation": "regex",
+              "value2": "^(queued|running)$"
+            }
+          ]
+        }
+      },
+      "id": "running-check-node",
+      "name": "Is Still Running?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        360
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend.onrender.com' }}/api/jobs/{{ $('Trigger OmniDev Agent').item.json.job_id }}/approve",
+        "url": "={{ $env.OMNIDEV_BACKEND_URL || 'https://omnidev-backend-yuf2.onrender.com' }}/api/jobs/{{ $('Trigger OmniDev Agent').item.json.job_id }}/approve",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-Target-Repo",
+              "value": "={{ ($('GitHub Issue Webhook').item.json.body.repository && $('GitHub Issue Webhook').item.json.body.repository.full_name) ? $('GitHub Issue Webhook').item.json.body.repository.full_name : '' }}"
+            },
+            {
+              "name": "X-GitHub-Token",
+              "value": "={{ $env.GITHUB_TOKEN || '' }}"
             }
           ]
         },
@@ -209,6 +251,24 @@
         [
           {
             "node": "Auto-Approve & Open GitHub PR",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Still Running?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Still Running?": {
+      "main": [
+        [
+          {
+            "node": "Wait for Agent Reasoning",
             "type": "main",
             "index": 0
           }

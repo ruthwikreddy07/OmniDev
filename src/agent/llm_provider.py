@@ -138,6 +138,28 @@ class LLMProvider:
                     break
             except urllib.error.HTTPError as e:
                 body = e.read().decode("utf-8")
+                if e.code == 400 and "tool_use_failed" in body:
+                    # Recover if Groq's gpt-oss model appended <|channel|>... to the tool name
+                    try:
+                        err_json = json.loads(body).get("error", {})
+                        fg = json.loads(err_json.get("failed_generation", "") or "{}")
+                        raw_name = fg.get("name", "")
+                        clean_name = raw_name.split("<|")[0].strip()
+                        if clean_name:
+                            return {
+                                "role": "model",
+                                "parts": [{
+                                    "functionCall": {
+                                        "name": clean_name,
+                                        "args": fg.get("arguments") if isinstance(fg.get("arguments"), dict) else {},
+                                    }
+                                }],
+                            }
+                    except Exception:
+                        pass
+                    if attempt < 3:
+                        time.sleep(1)
+                        continue
                 if e.code == 429 and attempt < 3:
                     sleep_time = 4 * (attempt + 1)
                     time.sleep(sleep_time)
@@ -157,7 +179,7 @@ class LLMProvider:
                 parsed_args = {}
             parts_out.append({
                 "functionCall": {
-                    "name": tc["function"]["name"],
+                    "name": tc["function"]["name"].split("<|")[0].strip(),
                     "args": parsed_args,
                 }
             })

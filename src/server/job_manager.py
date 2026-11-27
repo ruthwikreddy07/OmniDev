@@ -99,7 +99,7 @@ class JobManager:
                 err_str = err_str.replace(github_token, "***")
             job["status"] = "failed"
             job["result"] = err_str
-            add_log(job_id, "error", err_str)
+            on_step({"event": "error", "data": err_str})
         finally:
             if temp_workspace:
                 shutil.rmtree(temp_workspace, ignore_errors=True)
