@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any
 import difflib
@@ -41,6 +42,10 @@ def read_file_lines(file_path: str | Path, start_line: int = 1, end_line: int = 
     return '\n'.join(f"{start_line + i}: {line}" for i, line in enumerate(selected))
 
 
+def _decode_unicode_escapes(text: str) -> str:
+    return re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), text)
+
+
 def apply_patch(file_path: str | Path, target_code: str, replacement_code: str) -> dict[str, Any]:
     path = Path(file_path).resolve()
     if not path.is_file():
@@ -49,11 +54,30 @@ def apply_patch(file_path: str | Path, target_code: str, replacement_code: str) 
     normalized = content.replace('\r\n', '\n')
     norm_target = target_code.replace('\r\n', '\n')
     norm_replacement = replacement_code.replace('\r\n', '\n')
-    
-    if norm_target not in normalized:
-        raise ValueError(f"Target code not found in {file_path}")
-        
-    updated = normalized.replace(norm_target, norm_replacement, 1)
+
+    if norm_target in normalized:
+        updated = normalized.replace(norm_target, norm_replacement, 1)
+    else:
+        decoded_target = _decode_unicode_escapes(norm_target)
+        decoded_replacement = _decode_unicode_escapes(norm_replacement)
+        if decoded_target in normalized:
+            updated = normalized.replace(decoded_target, decoded_replacement, 1)
+        else:
+            # Indentation/whitespace-tolerant contiguous line match
+            file_lines = normalized.splitlines()
+            target_lines = [l.strip() for l in decoded_target.splitlines()]
+            match_idx = -1
+            if target_lines and any(target_lines):
+                n_t = len(target_lines)
+                for i in range(len(file_lines) - n_t + 1):
+                    if [file_lines[i + j].strip() for j in range(n_t)] == target_lines:
+                        match_idx = i
+                        break
+            if match_idx == -1:
+                raise ValueError(f"Target code not found in {file_path}")
+            rep_lines = decoded_replacement.splitlines()
+            new_lines = file_lines[:match_idx] + rep_lines + file_lines[match_idx + len(target_lines):]
+            updated = "\n".join(new_lines) + ("\n" if normalized.endswith("\n") else "")
     
     # Generate unified git-style diff
     diff_lines = list(difflib.unified_diff(
