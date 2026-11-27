@@ -55,6 +55,9 @@ def apply_patch(file_path: str | Path, target_code: str, replacement_code: str) 
     norm_target = target_code.replace('\r\n', '\n')
     norm_replacement = replacement_code.replace('\r\n', '\n')
 
+    if not norm_target.strip():
+        raise ValueError("target_code cannot be empty")
+
     if norm_target in normalized:
         updated = normalized.replace(norm_target, norm_replacement, 1)
     else:

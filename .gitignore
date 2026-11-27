@@ -55,7 +55,7 @@ dmypy.json
 *.key
 *.cert
 
-# Local Database Stores & WAL Journals
+# Local Database Stores & Seed Scripts
 *.db
 *.sqlite
 *.sqlite3
@@ -63,6 +63,7 @@ dmypy.json
 *.db-wal
 *.db-shm
 omnidev.db
+seed_db.py
 
 # Node.js & Package Managers
 node_modules/

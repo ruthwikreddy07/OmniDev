@@ -1,6 +1,6 @@
 # OmniDev — Autonomous Agentic Software Engineering & Self-Healing Pipeline
 
-[![Unit Tests](https://img.shields.io/badge/Unit%20Tests-17%2F17%20Passed-brightgreen)](#)
+[![Unit Tests](https://img.shields.io/badge/Unit%20Tests-28%2F28%20Passed-brightgreen)](#)
 [![Python Version](https://img.shields.io/badge/Python-3.12-blue.svg)](#)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20SQLite-336791)](#)
 [![Deployment](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Render-black)](#)

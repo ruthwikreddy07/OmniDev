@@ -81,19 +81,25 @@ class MCPServer:
                 "error": {"code": -32601, "message": f"Method '{method}' not found"}
             }
 
+    def _safe_path(self, fp: str) -> Path:
+        full = (self.root_dir / fp).resolve()
+        if not full.is_relative_to(self.root_dir):
+            raise PermissionError(f"Access denied: path '{fp}' escapes workspace root")
+        return full
+
     def call_tool(self, name: str, args: dict[str, Any]) -> Any:
         if name == "search_files":
             return search_files(self.root_dir, args.get("query", ""))
         elif name == "read_file_lines":
-            fp = self.root_dir / args.get("file_path", "")
-            return read_file_lines(fp, int(args.get("start_line", 1)), int(args.get("end_line", 50)))
+            fp = self._safe_path(args.get("file_path", ""))
+            return read_file_lines(fp, int(args.get("start_line") or 1), int(args.get("end_line") or 50))
         elif name == "apply_patch":
-            fp = self.root_dir / args.get("file_path", "")
+            fp = self._safe_path(args.get("file_path", ""))
             return apply_patch(fp, args.get("target_code", ""), args.get("replacement_code", ""))
         elif name == "run_tests":
             return run_tests(self.root_dir, args.get("test_command", "python -m pytest"))
         elif name == "get_file_tree":
-            return get_file_tree(self.root_dir, int(args.get("max_depth", 3)))
+            return get_file_tree(self.root_dir, int(args.get("max_depth") or 3))
         else:
             raise ValueError(f"Unknown tool: {name}")
 

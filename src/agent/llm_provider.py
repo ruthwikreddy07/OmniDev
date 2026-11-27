@@ -34,8 +34,9 @@ class LLMProvider:
         self.groq_key = os.environ.get("GROQ_API_KEY", "").strip()
         self.gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
 
-        if api_key and api_key.strip():
-            key = api_key.strip()
+        clean_explicit = (api_key or "").strip()
+        if clean_explicit and not clean_explicit.startswith("•") and clean_explicit not in ("Not configured", "Managed by Server", "Configured in Session"):
+            key = clean_explicit
             if key.startswith("gsk_"):
                 self.provider = "groq"
                 self.api_key = key
@@ -149,11 +150,15 @@ class LLMProvider:
             parts_out.append({"text": choice["content"]})
         if choice.get("tool_calls"):
             tc = choice["tool_calls"][0]
-            args = tc["function"].get("arguments", "{}")
+            raw_args = tc["function"].get("arguments", "{}")
+            try:
+                parsed_args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+            except Exception:
+                parsed_args = {}
             parts_out.append({
                 "functionCall": {
                     "name": tc["function"]["name"],
-                    "args": json.loads(args) if isinstance(args, str) else args,
+                    "args": parsed_args,
                 }
             })
         return {"role": "model", "parts": parts_out}

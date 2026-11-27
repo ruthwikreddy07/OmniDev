@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OmniDev — Platform Settings & User Profile</title>
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg">
 <link rel="stylesheet" href="/static/aurora.css">
 <style>
 .settings-layout { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 64px); }
@@ -267,15 +268,15 @@
           </div>
 
           <div class="settings-field">
-            <label>Public Localtunnel Ingress Gateway</label>
-            <input type="text" id="cfg-tunnel" value="https://fuzzy-keys-show.loca.lt" readonly style="font-family:var(--font-mono);">
-            <div class="hint">Forwards public GitHub webhook callbacks to localhost:4000</div>
+            <label>Public Tunnel Ingress Gateway (Optional)</label>
+            <input type="text" id="cfg-tunnel" value="" placeholder="Not configured (set LOCALTUNNEL_URL if needed)" readonly style="font-family:var(--font-mono);">
+            <div class="hint">Forwards public GitHub webhook callbacks to localhost:4000 during local testing</div>
           </div>
 
           <div class="settings-field">
             <label>n8n Cloud Webhook Endpoint</label>
             <div class="input-wrap">
-              <input type="text" id="cfg-n8n" value="https://n8n-mr7m.onrender.com/webhook/omnidev-github-incident" style="font-family:var(--font-mono);">
+              <input type="text" id="cfg-n8n" value="" placeholder="Configured via N8N_WEBHOOK_URL" style="font-family:var(--font-mono);">
               <button class="btn btn-ghost btn-sm" onclick="testConnection('webhook')">Ping Endpoint</button>
             </div>
             <div class="hint">Receives GitHub issue events and forwards them to OmniDev</div>

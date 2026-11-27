@@ -1,4 +1,3 @@
-import asyncio
 import json
 from fastapi import WebSocket
 
@@ -16,19 +15,24 @@ class WebSocketManager:
     def disconnect(self, job_id: str, ws: WebSocket):
         if job_id in self.connections:
             self.connections[job_id] = [c for c in self.connections[job_id] if c != ws]
+            if not self.connections[job_id]:
+                self.connections.pop(job_id, None)
 
     async def broadcast(self, job_id: str, data: dict):
-        if job_id not in self.connections:
+        conns = list(self.connections.get(job_id, []))
+        if not conns:
             return
         message = json.dumps(data)
         dead: list[WebSocket] = []
-        for ws in self.connections[job_id]:
+        for ws in conns:
             try:
                 await ws.send_text(message)
             except Exception:
                 dead.append(ws)
-        for ws in dead:
-            self.connections[job_id].remove(ws)
+        if dead and job_id in self.connections:
+            self.connections[job_id] = [c for c in self.connections[job_id] if c not in dead]
+            if not self.connections[job_id]:
+                self.connections.pop(job_id, None)
 
 
 ws_manager = WebSocketManager()

@@ -1,5 +1,7 @@
 import os
 import re
+import hmac
+import hashlib
 import httpx
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from pydantic import BaseModel
@@ -139,6 +141,16 @@ async def get_job(job_id: str, request: Request):
     return job
 
 
+@router.delete("/api/jobs/{job_id}")
+async def delete_job(job_id: str, request: Request):
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    _assert_job_repo_access(job, request)
+    job_manager.delete_job(job_id)
+    return {"status": "deleted", "job_id": job_id}
+
+
 @router.post("/api/jobs/{job_id}/approve")
 async def approve_job(job_id: str, request: Request):
     try:
@@ -181,7 +193,15 @@ async def mcp_endpoint(req: dict):
 
 
 @router.post("/api/webhook/github")
-async def github_webhook(payload: WebhookPayload):
+async def github_webhook(payload: WebhookPayload, request: Request):
+    webhook_secret = os.environ.get("GITHUB_WEBHOOK_SECRET", "").strip()
+    if webhook_secret:
+        sig_header = request.headers.get("X-Hub-Signature-256", "")
+        raw_body = await request.body()
+        expected = "sha256=" + hmac.new(webhook_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+        if not sig_header or not hmac.compare_digest(sig_header, expected):
+            raise HTTPException(status_code=401, detail="Invalid GitHub webhook signature")
+
     action = payload.action
     issue = payload.issue
     repo = payload.repository
@@ -429,13 +449,13 @@ async def system_info(request: Request):
         "groq_key_masked": "Managed by Server" if groq else "Not configured",
         "active_pr_url": None,
         "n8n_webhook_url": os.environ.get("N8N_WEBHOOK_URL", "https://n8n-mr7m.onrender.com/webhook/omnidev-github-incident"),
-        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", "https://fuzzy-keys-show.loca.lt"),
+        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", ""),
         "port": int(os.environ.get("PORT", 4000)),
         "model": "openai/gpt-oss-20b",
         "llm_provider": "Groq API (Free Tier)",
         "platform_status": "operational",
         "db_engine": get_db_engine_name(),
-        "tests_status": "17/17 passed",
+        "tests_status": "28/28 passed",
         "user_profile": USER_PROFILE
     }
 
@@ -478,7 +498,7 @@ async def get_settings(request: Request):
         "has_github_token": bool(user_token),
         "has_groq_key": bool(groq),
         "n8n_webhook_url": os.environ.get("N8N_WEBHOOK_URL", "https://n8n-mr7m.onrender.com/webhook/omnidev-github-incident"),
-        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", "https://fuzzy-keys-show.loca.lt"),
+        "localtunnel_url": os.environ.get("LOCALTUNNEL_URL", ""),
         "active_pr_url": None,
         "port": int(os.environ.get("PORT", 4000)),
         "project_dir": ".",

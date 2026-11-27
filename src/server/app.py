@@ -1,13 +1,22 @@
 import os
+import time
+import logging
 import html as html_lib
+from collections import defaultdict, deque
+from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from src.server.routes import router
 from src.server.database import get_db, get_db_engine_name
+
+logger = logging.getLogger("omnidev")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 app = FastAPI(
     title="OmniDev Backend API",
@@ -16,16 +25,55 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# Enable Cross-Origin Resource Sharing (CORS) for Vercel frontend deployment
+_raw_origins = os.environ.get("ALLOWED_ORIGINS", "")
+_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
+# Enable Cross-Origin Resource Sharing (CORS) for Vercel frontend & local dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=_allowed_origins,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https://[a-zA-Z0-9-]+\.vercel\.app$",
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
 )
 
+
+_RATE_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+
+
+@app.middleware("http")
+async def rate_limit_and_security_headers(request: Request, call_next):
+    if request.url.path.startswith("/api/"):
+        limit = int(os.environ.get("RATE_LIMIT_PER_MIN", "120"))
+        if limit > 0:
+            client_ip = request.client.host if request.client else "unknown"
+            now = time.monotonic()
+            bucket = _RATE_BUCKETS[client_ip]
+            while bucket and now - bucket[0] > 60.0:
+                bucket.popleft()
+            if len(bucket) >= limit:
+                return JSONResponse({"detail": "Rate limit exceeded. Please retry shortly."}, status_code=429)
+            bucket.append(now)
+
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse({"detail": "Internal server error"}, status_code=500)
+
+
 app.include_router(router)
+
+_STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
 
 def _check_backend_health() -> dict:
@@ -56,7 +104,7 @@ def _check_backend_health() -> dict:
     }
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/status", response_class=HTMLResponse)
 async def backend_status_page():
     h = _check_backend_health()
     is_ok = h["status"] == "operational"
@@ -147,3 +195,38 @@ async def health():
     h = _check_backend_health()
     code = 200 if h["status"] == "operational" else 503
     return JSONResponse(content=h, status_code=code)
+
+
+@app.get("/", include_in_schema=False)
+async def serve_index():
+    index_file = _STATIC_DIR / "index.html"
+    if index_file.is_file():
+        return FileResponse(str(index_file))
+    return await backend_status_page()
+
+
+@app.get("/robots.txt", include_in_schema=False)
+async def serve_robots():
+    f = _STATIC_DIR / "robots.txt"
+    if f.is_file():
+        return FileResponse(str(f), media_type="text/plain")
+    return JSONResponse({"detail": "Not found"}, status_code=404)
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def serve_sitemap():
+    f = _STATIC_DIR / "sitemap.xml"
+    if f.is_file():
+        return FileResponse(str(f), media_type="application/xml")
+    return JSONResponse({"detail": "Not found"}, status_code=404)
+
+
+for _page in ("console", "workspace", "analytics", "integrations", "rules", "docs", "settings", "auth"):
+    def _make_page_handler(page_name: str):
+        async def _handler():
+            target = _STATIC_DIR / f"{page_name}.html"
+            if target.is_file():
+                return FileResponse(str(target))
+            return JSONResponse({"detail": "Not found"}, status_code=404)
+        return _handler
+    app.add_api_route(f"/{_page}", _make_page_handler(_page), methods=["GET"], include_in_schema=False)

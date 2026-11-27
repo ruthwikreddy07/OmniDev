@@ -12,8 +12,12 @@ class AgentExecutor:
         self.max_iterations = max(1, min(int(max_iterations), 30))
         self.system_instruction = (
             "You are OmniDev, an autonomous software engineer. "
-            "Investigate bugs, search files, read code, apply patches, and run tests. "
-            "Always search before guessing. Read code before patching. Run tests after patching to verify."
+            "Investigate bugs, search files, read code, apply patches, and verify changes. "
+            "Always search before guessing and read code before patching. "
+            "If the repository has a test suite, run tests after patching (for subdirectories like Backend/, use --prefix Backend). "
+            "If no test suite exists or the task is comments/docs-only, verify syntax (e.g. node --check or python -m py_compile) instead of running `npm test`, "
+            "and NEVER modify package.json or create dummy files to fake passing tests. "
+            "Never repeat the exact same failing tool call."
         )
         self.logs: list[dict[str, str]] = []
         self.diffs: list[dict[str, Any]] = []
@@ -38,7 +42,9 @@ class AgentExecutor:
         elif tool_name == "read_file_lines":
             fp = args.get("file_path", "")
             full = self._safe_path(fp)
-            return {"file_path": fp, "content": read_file_lines(full, int(args.get("start_line", 1)), int(args.get("end_line", 50)))}
+            start_l = int(args.get("start_line") or 1)
+            end_l = int(args.get("end_line") or 50)
+            return {"file_path": fp, "content": read_file_lines(full, start_l, end_l)}
 
         elif tool_name == "apply_patch":
             fp = args.get("file_path", "")
@@ -52,11 +58,11 @@ class AgentExecutor:
             return result
 
         elif tool_name == "run_tests":
-            cmd = args.get("test_command", "python -m pytest")
+            cmd = args.get("test_command") or "python -m unittest"
             return run_tests(self.project_dir, cmd)
 
         elif tool_name == "get_file_tree":
-            return {"tree": get_file_tree(self.project_dir, int(args.get("max_depth", 3)))}
+            return {"tree": get_file_tree(self.project_dir, int(args.get("max_depth") or 3))}
 
         else:
             raise ValueError(f"Unknown tool: {tool_name}")

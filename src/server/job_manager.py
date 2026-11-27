@@ -10,7 +10,7 @@ from typing import Any
 from src.agent.llm_provider import LLMProvider
 from src.agent.agent_executor import AgentExecutor
 from src.github_client import GitHubClient
-from src.server.database import save_job, get_job as db_get_job, list_jobs as db_list_jobs, add_log
+from src.server.database import save_job, get_job as db_get_job, list_jobs as db_list_jobs, delete_job as db_delete_job, add_log
 
 
 def _clean_repo_slug(repo: str) -> str:
@@ -224,6 +224,9 @@ graph TD
 
     def list_jobs(self, github_repo: str | None = None) -> list[dict[str, Any]]:
         return db_list_jobs(github_repo=github_repo)
+
+    def delete_job(self, job_id: str) -> bool:
+        return db_delete_job(job_id)
 
 
 job_manager = JobManager()

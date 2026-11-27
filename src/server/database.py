@@ -221,6 +221,20 @@ def get_job(job_id: str) -> dict[str, Any] | None:
         conn.close()
 
 
+def delete_job(job_id: str) -> bool:
+    p = _ph()
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(f"DELETE FROM logs WHERE job_id = {p}", (job_id,))
+        cur.execute(f"DELETE FROM jobs WHERE id = {p}", (job_id,))
+        deleted = cur.rowcount > 0
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
+
 def get_telemetry_stats(github_repo: str | None = None) -> dict[str, Any]:
     p = _ph()
     conn = get_db()
