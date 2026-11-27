@@ -396,6 +396,20 @@ async function selectJob(jobId) {
           <a href="${escAttr(job.pr_url)}" target="_blank" class="btn btn-primary btn-sm">Open on GitHub ↗</a>
         </div>
       `;
+    } else if (job.status === 'max_iterations_reached') {
+      prBanner.style.display = 'block';
+      prBanner.innerHTML = `
+        <div class="pr-banner" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.35);">
+          <div class="pr-banner-left">
+            <svg style="color:#f59e0b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+              <div class="pr-banner-title">Max Iterations Reached</div>
+              <div class="pr-banner-desc" style="color:#fcd34d;white-space:normal;">Increase the iteration limit (up to 30) in Settings or specify an exact file path.</div>
+            </div>
+          </div>
+          <a href="/settings#agent" class="btn btn-ghost btn-sm">Adjust Limit ⚙</a>
+        </div>
+      `;
     } else {
       prBanner.style.display = 'none';
     }
@@ -470,6 +484,22 @@ function connectWS(jobId) {
               if (!j) return;
               const st = statusBadgeMap[j.status] || { cls: 'badge-neutral', label: j.status };
               document.getElementById('detail-status').innerHTML = '<span class="badge ' + st.cls + '"><span class="badge-dot"></span>' + st.label + '</span>';
+              const prBanner = document.getElementById('pr-banner-container');
+              if (j.status === 'max_iterations_reached' && !j.pr_url) {
+                prBanner.style.display = 'block';
+                prBanner.innerHTML = `
+                  <div class="pr-banner" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.35);">
+                    <div class="pr-banner-left">
+                      <svg style="color:#f59e0b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <div>
+                        <div class="pr-banner-title">Max Iterations Reached</div>
+                        <div class="pr-banner-desc" style="color:#fcd34d;white-space:normal;">Increase the iteration limit (up to 30) in Settings or specify an exact file path.</div>
+                      </div>
+                    </div>
+                    <a href="/settings#agent" class="btn btn-ghost btn-sm">Adjust Limit ⚙</a>
+                  </div>
+                `;
+              }
               const needsApproval = j.status === 'awaiting_approval' || j.status === 'pending_approval';
               document.getElementById('approval-dock').style.display = needsApproval ? 'flex' : 'none';
               const patchText = j.patch || (j.diffs && j.diffs.length ? j.diffs.map(d=>d.diff).join('\n') : '');
